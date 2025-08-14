@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fractal-down"
+version = "0.1.0"
+description = "Production-grade DAG evaluation with √N memory and fractal priority scheduling"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "ALL4XIOM"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+torch = ["torch"]
+test = ["pytest>=6.0"]
+
+[project.urls]
+Homepage = "https://github.com/nwoolr20/FD"
+Repository = "https://github.com/nwoolr20/FD"
+
+[project.scripts]
+fd = "fractal_down.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fractal_down*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short"
+]
