@@ -62,6 +62,24 @@ def main():
     clear_parser.add_argument('--count', type=int,
                              help='Keep only N newest plans')
     
+    # bench command
+    bench_parser = subparsers.add_parser('bench',
+                                        help='Run benchmark and verification suite')
+    bench_parser.add_argument('--scenarios', nargs='+',
+                             choices=['tiny', 'synthetic'],
+                             default=['tiny', 'synthetic'],
+                             help='Scenarios to run')
+    bench_parser.add_argument('--synthetic-n', type=int, default=200,
+                             help='Number of nodes for synthetic scenario')
+    bench_parser.add_argument('--budgets', type=str,
+                             help='Comma-separated budgets to override scenario defaults')
+    bench_parser.add_argument('--repeats', type=int, default=10,
+                             help='Number of repeats per job')
+    bench_parser.add_argument('--verify', action='store_true',
+                             help='Enable evaluator verification')
+    bench_parser.add_argument('--outdir', type=str,
+                             help='Output directory (default: artifacts/<timestamp>/)')
+    
     args = parser.parse_args()
     
     if args.command is None:
@@ -79,6 +97,8 @@ def main():
             return cmd_inspect_plan(args.path)
         elif args.command == 'clear-cache':
             return cmd_clear_cache(args.days, args.count)
+        elif args.command == 'bench':
+            return cmd_bench(args)
         else:
             print(f"Unknown command: {args.command}", file=sys.stderr)
             return 1
@@ -258,6 +278,47 @@ def cmd_clear_cache(days: Optional[int], count: Optional[int]) -> int:
     print(f"{remaining} files remaining in cache")
     
     return 0
+
+
+def cmd_bench(args) -> int:
+    """Run benchmark and verification suite."""
+    try:
+        import sys
+        import os
+        
+        # Add the parent directory to Python path to import bench
+        repo_root = Path(__file__).parent.parent
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        
+        import bench.run_suite
+        # Convert argparse Namespace to list of arguments for bench.run_suite.main()
+        bench_args = []
+        
+        if args.scenarios != ['tiny', 'synthetic']:  # Non-default
+            bench_args.extend(['--scenarios'] + args.scenarios)
+        
+        if args.synthetic_n != 200:  # Non-default
+            bench_args.extend(['--synthetic-n', str(args.synthetic_n)])
+        
+        if args.budgets:
+            bench_args.extend(['--budgets', args.budgets])
+        
+        if args.repeats != 10:  # Non-default
+            bench_args.extend(['--repeats', str(args.repeats)])
+        
+        if args.verify:
+            bench_args.append('--verify')
+        
+        if args.outdir:
+            bench_args.extend(['--outdir', args.outdir])
+        
+        return bench.run_suite.main(bench_args)
+        
+    except ImportError as e:
+        print(f"Error: bench module not available: {e}", file=sys.stderr)
+        print("Try installing optional dependencies: pip install -e .[bench]", file=sys.stderr)
+        return 1
 
 
 if __name__ == '__main__':

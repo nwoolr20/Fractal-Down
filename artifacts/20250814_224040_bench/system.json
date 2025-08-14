@@ -1,0 +1,15 @@
+{
+  "os": "Linux",
+  "os_version": "#18~24.04.1-Ubuntu SMP Sat Jun 28 04:46:03 UTC 2025",
+  "python_version": "3.12.3",
+  "architecture": "64bit",
+  "cpu_model": "x86_64",
+  "logical_cores": 2,
+  "physical_cores": "NA",
+  "ram_total_gb": "NA",
+  "gpu_models": "NA",
+  "gpu_count": 0,
+  "cuda_available": false,
+  "torch_version": "NA",
+  "cuda_version": "NA"
+}
