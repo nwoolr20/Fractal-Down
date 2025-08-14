@@ -1,0 +1,264 @@
+"""
+Command-line interface for fractal-down.
+
+Provides commands for building plans, evaluating DAGs, and managing the cache.
+"""
+
+import argparse
+import sys
+from pathlib import Path
+from typing import Optional
+
+from fractal_down.dag import DAG
+from fractal_down.treelift import build_plan, Plan
+from fractal_down.evaluator import Evaluator, EvalResult
+from fractal_down.fractal import compute_node_priority, FractalParams
+from fractal_down.binary_plan import save_plan, load_plan
+from fractal_down.cache import get_cache_dir, get_or_build_plan
+from fractal_down.examples import make_tiny_dag, demo_run
+
+
+def main():
+    """Main CLI entry point."""
+    parser = argparse.ArgumentParser(
+        prog='fd',
+        description='Fractal-Down: DAG evaluation with √N memory and fractal priority'
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    
+    # init-sample command
+    init_parser = subparsers.add_parser('init-sample', 
+                                       help='Initialize sample DAG and print details')
+    
+    # build-plan command  
+    build_parser = subparsers.add_parser('build-plan',
+                                        help='Build and save execution plan')
+    build_parser.add_argument('--budget', type=int, required=True,
+                             help='Memory budget (number of nodes)')
+    build_parser.add_argument('--save', type=str, required=True,
+                             help='Path to save plan file')
+    build_parser.add_argument('--root', type=int, required=True,
+                             help='Root node ID to evaluate')
+    
+    # eval command
+    eval_parser = subparsers.add_parser('eval', 
+                                       help='Evaluate DAG with given budget')
+    eval_parser.add_argument('--budget', type=int, required=True,
+                            help='Memory budget (number of nodes)')
+    eval_parser.add_argument('--verify', action='store_true',
+                            help='Enable verification mode')
+    
+    # inspect-plan command
+    inspect_parser = subparsers.add_parser('inspect-plan',
+                                          help='Inspect saved plan file')
+    inspect_parser.add_argument('path', help='Path to plan file')
+    
+    # clear-cache command
+    clear_parser = subparsers.add_parser('clear-cache',
+                                        help='Clear cached plans')
+    clear_parser.add_argument('--days', type=int,
+                             help='Remove plans older than N days')
+    clear_parser.add_argument('--count', type=int,
+                             help='Keep only N newest plans')
+    
+    args = parser.parse_args()
+    
+    if args.command is None:
+        parser.print_help()
+        return 1
+    
+    try:
+        if args.command == 'init-sample':
+            return cmd_init_sample()
+        elif args.command == 'build-plan':
+            return cmd_build_plan(args.budget, args.save, args.root)
+        elif args.command == 'eval':
+            return cmd_eval(args.budget, args.verify)
+        elif args.command == 'inspect-plan':
+            return cmd_inspect_plan(args.path)
+        elif args.command == 'clear-cache':
+            return cmd_clear_cache(args.days, args.count)
+        else:
+            print(f"Unknown command: {args.command}", file=sys.stderr)
+            return 1
+    
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_init_sample() -> int:
+    """Initialize sample DAG and print details."""
+    print("Creating sample DAG...")
+    dag, root, inputs = make_tiny_dag()
+    
+    print(f"Sample DAG created with {dag.size()} nodes")
+    print(f"Root node ID: {root}")
+    print("\nNode details:")
+    
+    for node_id in dag.postorder(root):
+        node = dag.node(node_id)
+        if node.op is None:
+            value = inputs.get(node_id, "N/A")
+            print(f"  {node_id}: {node.name} (leaf, value={value})")
+        else:
+            op_name = getattr(node.op, '__name__', str(node.op))
+            print(f"  {node_id}: {node.name} = {op_name}({list(node.inputs)})")
+    
+    print(f"\nExpected result: {(inputs[0] + inputs[1]) * (inputs[2] + inputs[3])}")
+    print(f"Use 'fd eval --budget 2 --verify' to evaluate this DAG")
+    
+    return 0
+
+
+def cmd_build_plan(budget: int, save_path: str, root_id: int) -> int:
+    """Build and save execution plan."""
+    print("Creating sample DAG...")
+    dag, actual_root, inputs = make_tiny_dag()
+    
+    # Validate root ID
+    if root_id not in dag._nodes:
+        print(f"Error: Root node {root_id} does not exist in DAG", file=sys.stderr)
+        print(f"Available nodes: {sorted(dag._nodes.keys())}")
+        return 1
+    
+    # Use provided root instead of default
+    root = root_id
+    
+    print(f"Building plan for root {root} with budget {budget}...")
+    
+    # Compute priorities
+    params = FractalParams()
+    priorities = compute_node_priority(dag, root, params)
+    
+    # Build plan
+    plan = build_plan(dag, root, budget_nodes=budget, node_priority=priorities)
+    
+    print(f"Plan built:")
+    print(f"  Root: {plan.root}")
+    print(f"  Budget: {plan.budget_nodes}")
+    print(f"  Order length: {len(plan.order)}")
+    print(f"  Order: {plan.order}")
+    
+    # Save plan
+    saved_path = save_plan(plan, save_path)
+    print(f"Plan saved to: {saved_path}")
+    
+    return 0
+
+
+def cmd_eval(budget: int, verify: bool) -> int:
+    """Evaluate DAG with given budget."""
+    print("Creating sample DAG...")
+    dag, root, inputs = make_tiny_dag()
+    
+    print(f"Evaluating with budget {budget}, verify={verify}")
+    
+    # Compute priorities and build plan
+    params = FractalParams()
+    priorities = compute_node_priority(dag, root, params)
+    
+    def build_fn():
+        return build_plan(dag, root, budget_nodes=budget, node_priority=priorities)
+    
+    # Get or build cached plan
+    plan, cache_path, was_cached = get_or_build_plan(
+        dag, root, budget, build_fn, params
+    )
+    
+    print(f"Plan {'loaded from cache' if was_cached else 'built and cached'}: {cache_path}")
+    print(f"Plan order length: {len(plan.order)}")
+    
+    # Evaluate
+    evaluator = Evaluator(dag, inputs)
+    result = evaluator.run(plan, verify=verify)
+    
+    print(f"Result: {result.value}")
+    print(f"Digest: {result.digest.hex()}")
+    
+    return 0
+
+
+def cmd_inspect_plan(path: str) -> int:
+    """Inspect saved plan file."""
+    try:
+        plan = load_plan(path)
+        print(f"Plan file: {path}")
+        print(f"Root: {plan.root}")
+        print(f"Budget: {plan.budget_nodes}")
+        print(f"Order length: {len(plan.order)}")
+        print(f"Order: {plan.order}")
+        return 0
+        
+    except (ValueError, IOError) as e:
+        print(f"Error loading plan: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_clear_cache(days: Optional[int], count: Optional[int]) -> int:
+    """Clear cached plans."""
+    cache_dir = get_cache_dir()
+    
+    if not cache_dir.exists():
+        print("No cache directory found")
+        return 0
+    
+    # Get all plan files
+    plan_files = list(cache_dir.glob("*.fplan"))
+    
+    if not plan_files:
+        print("No cached plans found")
+        return 0
+    
+    # Determine which files to remove
+    files_to_remove = []
+    
+    if days is not None:
+        import time
+        cutoff_time = time.time() - (days * 24 * 60 * 60)
+        for plan_file in plan_files:
+            try:
+                if plan_file.stat().st_mtime < cutoff_time:
+                    files_to_remove.append(plan_file)
+            except OSError:
+                continue
+    
+    elif count is not None:
+        # Keep only N newest files
+        plan_files_with_time = []
+        for plan_file in plan_files:
+            try:
+                mtime = plan_file.stat().st_mtime
+                plan_files_with_time.append((mtime, plan_file))
+            except OSError:
+                continue
+        
+        # Sort by modification time, newest first
+        plan_files_with_time.sort(key=lambda x: x[0], reverse=True)
+        
+        # Remove files beyond the count
+        files_to_remove = [f for _, f in plan_files_with_time[count:]]
+    
+    else:
+        # Remove all files
+        files_to_remove = plan_files
+    
+    # Remove the files
+    removed_count = 0
+    for plan_file in files_to_remove:
+        try:
+            plan_file.unlink()
+            removed_count += 1
+        except OSError:
+            continue
+    
+    print(f"Removed {removed_count} cached plan files")
+    remaining = len(plan_files) - removed_count
+    print(f"{remaining} files remaining in cache")
+    
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

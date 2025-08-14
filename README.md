@@ -1,2 +1,206 @@
-# FD
-Fractal Down
+# Fractal-Down
+
+Production-grade DAG evaluation with √N memory and fractal priority scheduling.
+
+## Overview
+
+Fractal-Down is a Python package that evaluates computational DAGs (Directed Acyclic Graphs) using innovative memory-efficient algorithms:
+
+- **√N Memory Complexity**: Uses square-root of graph size for scratch memory, making it feasible to evaluate large graphs on memory-constrained systems
+- **Fractal Priority Scheduling**: Prioritizes computation based on energy functions that consider residual error, entropy, novelty, and other factors with depth-dependent thresholds
+- **Plan Caching**: Stores execution plans in binary format with hash verification for fast re-evaluation
+- **Deterministic**: All algorithms produce reproducible results with deterministic tie-breaking
+
+The core idea is that computation "descends" only where energy is high (hence "fractal-down"), and the √N evaluator bounds scratch memory usage while the plan cache saves recipes rather than activations.
+
+## Quick Start
+
+### Installation
+
+```bash
+pip install fractal-down
+```
+
+Or with torch support:
+```bash
+pip install fractal-down[torch]
+```
+
+### Basic Usage
+
+```python
+from fractal_down import DAG, build_plan, Evaluator, FractalParams, compute_node_priority
+import operator
+
+# Create a simple DAG
+dag = DAG()
+a = dag.add_leaf("a")
+b = dag.add_leaf("b") 
+c = dag.add_leaf("c")
+d = dag.add_leaf("d")
+add1 = dag.add_op("a+b", operator.add, [a, b])
+add2 = dag.add_op("c+d", operator.add, [c, d])
+mul = dag.add_op("(a+b)*(c+d)", operator.mul, [add1, add2])
+
+# Define inputs
+inputs = {a: 2, b: 3, c: 4, d: 5}
+
+# Compute fractal priorities
+params = FractalParams()
+priorities = compute_node_priority(dag, mul, params)
+
+# Build execution plan with √N memory budget
+plan = build_plan(dag, mul, budget_nodes=3, node_priority=priorities)
+
+# Evaluate
+evaluator = Evaluator(dag, inputs)
+result = evaluator.run(plan, verify=True)
+print(f"Result: {result.value}")  # Output: 45
+print(f"Digest: {result.digest.hex()}")
+```
+
+### CLI Usage
+
+```bash
+# Initialize and run sample
+fd init-sample
+fd eval --budget 2 --verify
+
+# Build and save plan
+fd build-plan --budget 4 --save myplan.fplan --root 6
+
+# Inspect saved plan
+fd inspect-plan myplan.fplan
+
+# Clear cache
+fd clear-cache
+```
+
+## Core Concepts
+
+### DAG Nodes
+Nodes are immutable with:
+- **id**: Unique integer identifier  
+- **name**: Human-readable name
+- **op**: Operation function (None for leaf nodes)
+- **inputs**: Tuple of parent node IDs
+- **meta**: Sorted metadata for energy computation
+
+### Fractal Priority
+Priority is computed using an energy function:
+```
+E = αe + βH + γw + δn - κa
+```
+Where:
+- **e**: residual/error (meta key "e")
+- **H**: entropy/spread (meta key "H" or "h")
+- **w**: affect weight (meta key "w") 
+- **n**: novelty (meta key "n")
+- **a**: age penalty (meta key "a")
+
+Priorities use depth-dependent thresholds: `τₛ = τ₀ × λˢ` or `τ₀/(s+1)ᵖ`
+
+### √N TreeLift Plan
+The TreeLift algorithm simulates evaluation with an LRU cache of size `budget_nodes = max(16, ⌈√N⌉)` where N is the number of nodes. It determines the optimal sequence of node computations that respects dependencies while minimizing recomputation.
+
+### Plan Caching
+Plans are cached using content-based fingerprints that combine:
+- Canonical DAG structure and metadata
+- Budget parameters  
+- Fractal parameters
+
+Cached plans use a binary format with magic header, versioning, and hash verification.
+
+## API Reference
+
+### Core Classes
+
+| Class | Description |
+|-------|-------------|
+| `DAG` | Directed acyclic graph with cycle detection |
+| `Node` | Immutable node with id, name, operation, inputs, and metadata |
+| `FractalParams` | Parameters for energy-based priority computation |
+| `Plan` | Execution plan with root, budget, and node ordering |
+| `Evaluator` | DAG evaluator with √N memory constraint |
+| `EvalResult` | Evaluation result with value and hash digest |
+
+### Key Functions
+
+| Function | Description |
+|----------|-------------|
+| `compute_node_priority(dag, root, params)` | Compute fractal priorities for all reachable nodes |
+| `build_plan(dag, root, budget_nodes, node_priority)` | Build √N TreeLift execution plan |
+| `save_plan(plan, path)` | Save plan to binary format |
+| `load_plan(path)` | Load plan from binary format |  
+| `get_or_build_plan(dag, root, budget, build_fn, params)` | Get cached plan or build new one |
+
+## Advanced Features
+
+### Custom Energy Functions
+Define custom metadata for priority computation:
+
+```python
+# High-priority node
+high = dag.add_leaf("critical", {"e": 2.0, "H": 1.5, "w": 1.0})
+
+# Low-priority node  
+low = dag.add_leaf("optional", {"e": 0.1, "H": 0.2, "a": 0.8})
+```
+
+### Torch Integration
+Convert PyTorch modules to DAGs (requires `pip install fractal-down[torch]`):
+
+```python  
+import torch
+from fractal_down import DAG
+
+model = torch.nn.Sequential(
+    torch.nn.Linear(10, 5),
+    torch.nn.ReLU(),
+    torch.nn.Linear(5, 1)
+)
+example_input = torch.randn(1, 10)
+
+dag, root, inputs = DAG.from_torch_module(model, (example_input,))
+```
+
+### Custom Hash Providers
+Use custom hash functions for plan verification:
+
+```python
+from fractal_down.hashing import HashProvider
+
+class CustomHashProvider:
+    def digest(self, data: bytes) -> bytes:
+        return my_custom_hash(data)
+
+evaluator = Evaluator(dag, inputs, hash_provider=CustomHashProvider())
+```
+
+## Configuration
+
+Environment variables:
+- `FRACTAL_DOWN_PLANS_DIR`: Cache directory (default: `~/.fractal_down/plans`)
+- `FRACTAL_DOWN_PLAN_MAX_KEEP`: Max cached plans (default: 512)
+
+## Performance
+
+The algorithms are designed for efficiency:
+- **DAG operations**: O(N) for most operations with memoized postorder traversal
+- **Priority computation**: O(N log N) with constraint propagation  
+- **Plan building**: O(N log B) where B is budget size
+- **Evaluation**: O(P) where P is plan length (includes recomputation)
+- **Memory usage**: O(√N) scratch space during evaluation
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+Contributions welcome! Please ensure all tests pass:
+
+```bash
+pip install -e .[test]
+pytest
+```
