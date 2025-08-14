@@ -1,0 +1,185 @@
+{
+  "total_jobs": 21,
+  "scenarios": {
+    "tiny": {
+      "baseline": {
+        "peak_rss_bytes": {
+          "min": 64249856,
+          "mean": 64337237.333333336,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.00022905699995590112,
+          "mean": 0.0002689253333301167,
+          "max": 0.000303486999996494
+        },
+        "cpu_s": {
+          "min": 0.0002712859999999262,
+          "mean": 0.0003143266666666422,
+          "max": 0.0003558750000000055
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 0.0
+      },
+      "sqrt-2": {
+        "peak_rss_bytes": {
+          "min": 64380928,
+          "mean": 64380928.0,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0011835990000008678,
+          "mean": 0.0012565580000227783,
+          "max": 0.0013143119999767805
+        },
+        "cpu_s": {
+          "min": 0.0013388819999999857,
+          "mean": 0.001416234666666664,
+          "max": 0.001475073000000049
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 100.0
+      },
+      "sqrt-3": {
+        "peak_rss_bytes": {
+          "min": 64380928,
+          "mean": 64380928.0,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0009273310000708079,
+          "mean": 0.0011306466666762087,
+          "max": 0.0012427290000687208
+        },
+        "cpu_s": {
+          "min": 0.0009265790000000385,
+          "mean": 0.0012196913333333652,
+          "max": 0.0013674790000000048
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 100.0
+      }
+    },
+    "synthetic": {
+      "baseline": {
+        "peak_rss_bytes": {
+          "min": 64380928,
+          "mean": 64380928.0,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0002360099999805243,
+          "mean": 0.0002790539999750763,
+          "max": 0.00030527000001256965
+        },
+        "cpu_s": {
+          "min": 0.00023509899999996087,
+          "mean": 0.0003090409999999544,
+          "max": 0.0003481909999999422
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 0.0
+      },
+      "sqrt-5": {
+        "peak_rss_bytes": {
+          "min": 64380928,
+          "mean": 64380928.0,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0011029380000309175,
+          "mean": 0.001451084333363421,
+          "max": 0.0019709680000232765
+        },
+        "cpu_s": {
+          "min": 0.001140397999999987,
+          "mean": 0.0015600579999999937,
+          "max": 0.0021272989999999714
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 66.66666666666666
+      },
+      "sqrt-10": {
+        "peak_rss_bytes": {
+          "min": 64380928,
+          "mean": 64380928.0,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0012254270000084944,
+          "mean": 0.001422648333308037,
+          "max": 0.0017540630000212332
+        },
+        "cpu_s": {
+          "min": 0.0013655510000000204,
+          "mean": 0.0015123486666666814,
+          "max": 0.0017536419999999442
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 66.66666666666666
+      },
+      "sqrt-20": {
+        "peak_rss_bytes": {
+          "min": 64380928,
+          "mean": 64380928.0,
+          "max": 64380928
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0009989240001004873,
+          "mean": 0.0012848406666989831,
+          "max": 0.0015001689999962764
+        },
+        "cpu_s": {
+          "min": 0.0009984929999999892,
+          "mean": 0.0013766463333333052,
+          "max": 0.0016315059999999493
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 66.66666666666666
+      }
+    }
+  },
+  "non_goals_note": "Not a distributed scheduler - single process only. Slowdown is expected but should be predictable. Tune FractalParams per domain for best results."
+}

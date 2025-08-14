@@ -1,0 +1,280 @@
+"""
+Benchmark scenarios for fractal-down evaluation.
+
+Provides scenario providers that generate test jobs for baseline vs √N+fractal
+comparison across different DAG structures and budgets.
+"""
+
+import math
+import random
+import operator
+from typing import List, Dict, Any, Optional, Tuple
+from collections import OrderedDict
+
+from fractal_down.dag import DAG
+from fractal_down.examples import make_tiny_dag
+
+
+class Job:
+    """A benchmark job specification."""
+    
+    def __init__(self, name: str, mode: str, budget_nodes: Optional[int], 
+                 dag: DAG, root: int, inputs: Dict[int, Any]):
+        self.name = name
+        self.mode = mode  # "baseline" or "sqrt"
+        self.budget_nodes = budget_nodes  # None for baseline
+        self.dag = dag
+        self.root = root
+        self.inputs = inputs
+
+
+def scenario_tiny() -> List[Job]:
+    """
+    Generate tiny scenario jobs using make_tiny_dag().
+    
+    Returns:
+        List of Job objects for baseline and √N+fractal modes
+        with budgets [2, 3] and 5 repeats each.
+    """
+    jobs = []
+    budgets = [2, 3]
+    repeats = 5
+    
+    # Get the tiny DAG
+    dag, root, inputs = make_tiny_dag()
+    
+    # Baseline jobs (no budget limit, just topological evaluation)
+    for repeat in range(repeats):
+        job = Job(
+            name=f"tiny/baseline/repeat_{repeat}",
+            mode="baseline", 
+            budget_nodes=None,
+            dag=dag,
+            root=root,
+            inputs=inputs
+        )
+        jobs.append(job)
+    
+    # √N+fractal jobs with different budgets
+    for budget in budgets:
+        for repeat in range(repeats):
+            job = Job(
+                name=f"tiny/sqrt-{budget}/repeat_{repeat}",
+                mode="sqrt",
+                budget_nodes=budget,
+                dag=dag,
+                root=root,
+                inputs=inputs
+            )
+            jobs.append(job)
+    
+    return jobs
+
+
+def scenario_synthetic(n_nodes: int = 200) -> List[Job]:
+    """
+    Generate synthetic scenario with ~n_nodes DAG.
+    
+    Args:
+        n_nodes: Target number of nodes in the synthetic DAG
+        
+    Returns:
+        List of Job objects for baseline and √N+fractal modes
+        with computed budgets and 10 repeats each.
+    """
+    jobs = []
+    repeats = 10
+    
+    # Create synthetic DAG
+    dag, root, inputs = _create_synthetic_dag(n_nodes)
+    
+    # Compute budgets: [ceil(sqrt(N))/2, ceil(sqrt(N)), 2*ceil(sqrt(N))]
+    sqrt_n = math.ceil(math.sqrt(n_nodes))
+    budgets = [
+        max(1, sqrt_n // 2),  # Ensure at least 1
+        sqrt_n,
+        2 * sqrt_n
+    ]
+    
+    # Baseline jobs
+    for repeat in range(repeats):
+        job = Job(
+            name=f"synthetic-{n_nodes}/baseline/repeat_{repeat}",
+            mode="baseline",
+            budget_nodes=None,
+            dag=dag,
+            root=root,
+            inputs=inputs
+        )
+        jobs.append(job)
+    
+    # √N+fractal jobs
+    for budget in budgets:
+        for repeat in range(repeats):
+            job = Job(
+                name=f"synthetic-{n_nodes}/sqrt-{budget}/repeat_{repeat}",
+                mode="sqrt",
+                budget_nodes=budget,
+                dag=dag,
+                root=root,
+                inputs=inputs
+            )
+            jobs.append(job)
+    
+    return jobs
+
+
+def _create_synthetic_dag(target_nodes: int, seed: int = 42) -> Tuple[DAG, int, Dict[int, Any]]:
+    """
+    Create a synthetic DAG with approximately target_nodes nodes.
+    
+    The DAG will have bounded fan-in (<=3) and deterministic structure
+    based on the seed. Nodes get random-but-deterministic metadata
+    to exercise fractal priority computation.
+    
+    Args:
+        target_nodes: Target number of nodes
+        seed: Random seed for deterministic generation
+        
+    Returns:
+        Tuple of (DAG, root_id, input_values)
+    """
+    random.seed(seed)
+    dag = DAG()
+    
+    # Start with some leaf nodes (inputs)
+    num_leaves = max(3, target_nodes // 8)  # ~12.5% leaves
+    leaf_ids = []
+    inputs = {}
+    
+    for i in range(num_leaves):
+        # Random metadata for fractal priority
+        meta = {
+            "e": random.uniform(0.1, 1.0),
+            "H": random.uniform(0.0, 1.0), 
+            "w": random.uniform(0.1, 0.9),
+            "n": random.uniform(0.1, 0.9),
+            "a": random.uniform(0.0, 0.8)
+        }
+        
+        leaf_id = dag.add_leaf(f"leaf_{i}", meta)
+        leaf_ids.append(leaf_id)
+        inputs[leaf_id] = random.uniform(-10.0, 10.0)
+    
+    # Define operations with their properties
+    def double_op(x):
+        return x * 2
+    
+    def inc_op(x):
+        return x + 1
+    
+    def madd_op(x, y):
+        return x * y + x
+    
+    # Build up layers of operations
+    current_nodes = leaf_ids[:]
+    operations = [
+        (operator.add, "add", "binary"),
+        (operator.mul, "mul", "binary"), 
+        (operator.sub, "sub", "binary"),
+        (double_op, "double", "unary"),
+        (inc_op, "inc", "unary"),
+        (madd_op, "madd", "binary")
+    ]
+    
+    node_count = len(leaf_ids)
+    layer = 0
+    
+    while node_count < target_nodes and len(current_nodes) > 0:
+        layer += 1
+        next_nodes = []
+        
+        # Randomly combine nodes from current layer
+        random.shuffle(current_nodes)
+        
+        i = 0
+        while i < len(current_nodes) and node_count < target_nodes:
+            # Choose operation and fan-in
+            op_func, op_name, op_type = random.choice(operations)
+            
+            # Determine number of inputs based on operation type
+            if op_type == "unary":
+                fan_in = 1
+            elif op_type == "binary":
+                fan_in = 2
+            else:
+                # Should not happen with current operations
+                fan_in = 2
+            
+            # Adjust fan-in if we don't have enough nodes
+            available = len(current_nodes) - i
+            fan_in = min(fan_in, available)
+                
+            if fan_in == 0:
+                break
+                
+            # For binary operations, ensure we have at least 2 nodes or skip
+            if op_type == "binary" and fan_in < 2:
+                # Try to use remaining nodes with add operation instead
+                if available >= 2:
+                    op_func = operator.add
+                    op_name = "add"
+                    fan_in = min(2, available)
+                else:
+                    # Skip this iteration
+                    i += 1
+                    continue
+            
+            # Get inputs for this operation
+            op_inputs = current_nodes[i:i + fan_in]
+            
+            # Create metadata
+            meta = {
+                "e": random.uniform(0.2, 0.9),
+                "H": random.uniform(0.1, 0.8),
+                "w": random.uniform(0.2, 0.7),
+                "n": random.uniform(0.0, 0.6),
+                "a": random.uniform(0.1, 0.5)
+            }
+            
+            try:
+                node_id = dag.add_op(
+                    f"op_{layer}_{len(next_nodes)}_{op_name}",
+                    op_func,
+                    op_inputs,
+                    meta
+                )
+                next_nodes.append(node_id)
+                node_count += 1
+            except Exception as e:
+                # If operation fails, skip it
+                print(f"Warning: Skipping operation {op_name}: {e}")
+                pass
+            
+            i += fan_in
+        
+        # If we couldn't create any new nodes, break
+        if not next_nodes:
+            break
+            
+        current_nodes = next_nodes
+    
+    # Choose root node (last layer, or create one if needed)
+    if current_nodes:
+        if len(current_nodes) == 1:
+            root = current_nodes[0]
+        else:
+            # Combine remaining nodes into a root
+            meta = {
+                "e": 0.5,
+                "H": 0.5,
+                "w": 0.5,
+                "n": 0.5,
+                "a": 0.3
+            }
+            root = dag.add_op("root", operator.add, current_nodes, meta)
+    else:
+        # Fallback: use the first leaf as root
+        root = leaf_ids[0]
+    
+    return dag, root, inputs

@@ -1,0 +1,83 @@
+{
+  "total_jobs": 3,
+  "scenarios": {
+    "synthetic": {
+      "baseline": {
+        "peak_rss_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "cpu_s": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "energy_uj": "NA",
+        "parity_percent": 0.0,
+        "cache_hit_rate_percent": 0.0
+      },
+      "sqrt-4": {
+        "peak_rss_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "cpu_s": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "energy_uj": "NA",
+        "parity_percent": 0.0,
+        "cache_hit_rate_percent": 0.0
+      },
+      "sqrt-8": {
+        "peak_rss_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "cpu_s": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "energy_uj": "NA",
+        "parity_percent": 0.0,
+        "cache_hit_rate_percent": 0.0
+      }
+    }
+  },
+  "non_goals_note": "Not a distributed scheduler - single process only. Slowdown is expected but should be predictable. Tune FractalParams per domain for best results."
+}

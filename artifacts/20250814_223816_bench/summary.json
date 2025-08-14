@@ -1,0 +1,83 @@
+{
+  "total_jobs": 3,
+  "scenarios": {
+    "tiny": {
+      "baseline": {
+        "peak_rss_bytes": {
+          "min": 21778432,
+          "mean": 21778432.0,
+          "max": 21778432
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0001788240000450969,
+          "mean": 0.0001788240000450969,
+          "max": 0.0001788240000450969
+        },
+        "cpu_s": {
+          "min": 0.00017785199999999224,
+          "mean": 0.00017785199999999224,
+          "max": 0.00017785199999999224
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 0.0
+      },
+      "sqrt-2": {
+        "peak_rss_bytes": {
+          "min": 21778432,
+          "mean": 21778432.0,
+          "max": 21778432
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0013529859999152904,
+          "mean": 0.0013529859999152904,
+          "max": 0.0013529859999152904
+        },
+        "cpu_s": {
+          "min": 0.0013530949999999986,
+          "mean": 0.0013530949999999986,
+          "max": 0.0013530949999999986
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 0.0
+      },
+      "sqrt-3": {
+        "peak_rss_bytes": {
+          "min": 21778432,
+          "mean": 21778432.0,
+          "max": 21778432
+        },
+        "peak_vram_bytes": {
+          "min": 0,
+          "mean": 0,
+          "max": 0
+        },
+        "wall_s": {
+          "min": 0.0009665039999617875,
+          "mean": 0.0009665039999617875,
+          "max": 0.0009665039999617875
+        },
+        "cpu_s": {
+          "min": 0.000966763999999995,
+          "mean": 0.000966763999999995,
+          "max": 0.000966763999999995
+        },
+        "energy_uj": "NA",
+        "parity_percent": 100.0,
+        "cache_hit_rate_percent": 0.0
+      }
+    }
+  },
+  "non_goals_note": "Not a distributed scheduler - single process only. Slowdown is expected but should be predictable. Tune FractalParams per domain for best results."
+}
