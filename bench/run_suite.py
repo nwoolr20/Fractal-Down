@@ -19,7 +19,7 @@ from fractal_down.fractal import compute_node_priority, FractalParams
 from fractal_down.cache import get_or_build_plan
 
 # Bench imports
-from bench.scenarios import scenario_tiny, scenario_synthetic, Job
+from bench.scenarios import scenario_tiny, scenario_synthetic, scenario_memory_stress, Job
 from bench.metrics import track_peak_rss, measure_vram_peak, Timer, measure_energy, check_correctness
 from bench.persist import new_run_dir, write_json, write_csv
 from bench.graphs import generate_all_charts
@@ -41,7 +41,7 @@ def main(args: Optional[List[str]] = None) -> int:
     )
     
     parser.add_argument('--scenarios', nargs='+', 
-                       choices=['tiny', 'synthetic'],
+                       choices=['tiny', 'synthetic', 'memory-stress'],
                        default=['tiny', 'synthetic'],
                        help='Scenarios to run')
     
@@ -65,6 +65,12 @@ def main(args: Optional[List[str]] = None) -> int:
     
     parser.add_argument('--budget-sweep', action='store_true',
                        help='Auto-generate budgets around √N for scenario (overrides --budgets)')
+    
+    parser.add_argument('--clear-plan-cache', action='store_true',
+                       help='Clear plan cache before running to measure cold performance')
+    
+    parser.add_argument('--memory-stress-mb', type=int, default=32,
+                       help='Memory payload size in MB for memory-stress scenario (default: 32)')
     
     parsed_args = parser.parse_args(args)
     
@@ -101,6 +107,14 @@ def main(args: Optional[List[str]] = None) -> int:
         jobs.extend(synthetic_jobs)
         print(f"Generated {len(synthetic_jobs)} synthetic scenario jobs")
     
+    if 'memory-stress' in parsed_args.scenarios:
+        memory_jobs = scenario_memory_stress(parsed_args.memory_stress_mb)
+        # Override repeats if specified
+        if parsed_args.repeats != 5:  # 5 is default for memory-stress
+            memory_jobs = _override_repeats(memory_jobs, parsed_args.repeats, 'memory-stress')
+        jobs.extend(memory_jobs)
+        print(f"Generated {len(memory_jobs)} memory-stress scenario jobs")
+    
     # Override budgets if specified
     if parsed_args.budget_sweep:
         # Auto-generate budgets around √N for each scenario
@@ -120,6 +134,12 @@ def main(args: Optional[List[str]] = None) -> int:
         return 1
     
     print(f"Running {len(jobs)} total jobs...")
+    
+    # Clear plan cache if requested (for cold performance testing)
+    if parsed_args.clear_plan_cache:
+        from fractal_down.cache import clear_cache
+        clear_cache()
+        print("Cleared plan cache for cold performance testing")
     
     # Run benchmark jobs
     results = []
@@ -649,6 +669,24 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
             warm_avg = sum(warm_times) / len(warm_times)
             speedup = cold_avg / warm_avg if warm_avg > 0 else 1
             print(f"  Cold (plan build): {cold_avg*1000:.1f}ms avg, Warm (cached): {warm_avg*1000:.1f}ms avg ({speedup:.1f}x speedup)")
+
+    # Plan Statistics (recompute factors) 
+    print("\nPlan Statistics (recompute factors):")
+    scenario_plan_stats = {}
+    for r in results:
+        if r.get('mode') == 'sqrt' and r.get('recompute_factor') is not None:
+            scenario = r.get('scenario', 'unknown')
+            budget = r.get('budget_nodes', 'unknown')
+            key = f"{scenario} budget={budget}"
+            
+            if key not in scenario_plan_stats:
+                scenario_plan_stats[key] = []
+            scenario_plan_stats[key].append(r.get('recompute_factor', 1.0))
+    
+    for key, factors in scenario_plan_stats.items():
+        if factors:
+            avg_factor = sum(factors) / len(factors)
+            print(f"  {key}: {avg_factor:.2f}x recompute (higher = more recomputation)")
 
     # Add non-goals note
     print(f"\nNote: Slowdown is expected but bounded. √N+fractal trades speed for memory.")

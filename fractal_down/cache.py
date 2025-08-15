@@ -191,3 +191,19 @@ def _cleanup_cache():
     except OSError:
         # Failed to clean up cache - continue silently
         pass
+
+
+def clear_cache():
+    """Clear all cached plans for cold performance testing."""
+    cache_dir = get_cache_dir()
+    
+    try:
+        # Remove all .fplan files
+        for cache_file in cache_dir.glob("*.fplan"):
+            try:
+                cache_file.unlink()
+            except OSError:
+                continue
+    except OSError:
+        # Failed to clear cache - continue silently
+        pass
