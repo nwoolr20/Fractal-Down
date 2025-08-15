@@ -72,6 +72,12 @@ def main(args: Optional[List[str]] = None) -> int:
     parser.add_argument('--memory-stress-mb', type=int, default=32,
                        help='Memory payload size in MB for memory-stress scenario (default: 32)')
     
+    parser.add_argument('--dwell-ms', type=int, default=0,
+                       help='Time in milliseconds to keep memory alive after computation (default: 0, helps capture peak RSS)')
+    
+    parser.add_argument('--rss-cap-mb', type=int, default=0,
+                       help='RSS cap in MB for baseline-stress detection (default: 0=disabled, marks jobs that exceed this as CAP_EXCEEDED)')
+    
     parsed_args = parser.parse_args(args)
     
     # Create run directory
@@ -92,7 +98,7 @@ def main(args: Optional[List[str]] = None) -> int:
     jobs = []
     
     if 'tiny' in parsed_args.scenarios:
-        tiny_jobs = scenario_tiny(parsed_args.payload_bytes)
+        tiny_jobs = scenario_tiny(parsed_args.payload_bytes, parsed_args.dwell_ms)
         # Override repeats if specified
         if parsed_args.repeats != 5:  # 5 is default for tiny
             tiny_jobs = _override_repeats(tiny_jobs, parsed_args.repeats, 'tiny')
@@ -100,7 +106,7 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(tiny_jobs)} tiny scenario jobs")
     
     if 'synthetic' in parsed_args.scenarios:
-        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n, parsed_args.payload_bytes)
+        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n, parsed_args.payload_bytes, parsed_args.dwell_ms)
         # Override repeats if specified
         if parsed_args.repeats != 10:  # 10 is default for synthetic
             synthetic_jobs = _override_repeats(synthetic_jobs, parsed_args.repeats, 'synthetic')
@@ -108,9 +114,9 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(synthetic_jobs)} synthetic scenario jobs")
     
     if 'memory-stress' in parsed_args.scenarios:
-        memory_jobs = scenario_memory_stress(parsed_args.memory_stress_mb)
+        memory_jobs = scenario_memory_stress(parsed_args.memory_stress_mb, parsed_args.dwell_ms)
         # Override repeats if specified
-        if parsed_args.repeats != 5:  # 5 is default for memory-stress
+        if parsed_args.repeats != 10:  # 10 is default for memory-stress
             memory_jobs = _override_repeats(memory_jobs, parsed_args.repeats, 'memory-stress')
         jobs.extend(memory_jobs)
         print(f"Generated {len(memory_jobs)} memory-stress scenario jobs")
@@ -148,7 +154,7 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Running job {i+1}/{len(jobs)}: {job.name}")
         
         try:
-            result = _run_single_job(job, parsed_args.verify)
+            result = _run_single_job(job, parsed_args.verify, parsed_args.rss_cap_mb)
             results.append(result)
         except Exception as e:
             print(f"  ERROR: {e}")
@@ -192,13 +198,14 @@ def main(args: Optional[List[str]] = None) -> int:
     return 0
 
 
-def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
+def _run_single_job(job: Job, verify: bool = False, rss_cap_mb: int = 0) -> Dict[str, Any]:
     """
     Run a single benchmark job and collect all metrics.
     
     Args:
         job: Job specification
         verify: Whether to enable verification
+        rss_cap_mb: RSS cap in MB for baseline-stress detection (0=disabled)
         
     Returns:
         Dictionary with all collected metrics
@@ -240,6 +247,10 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         gc.collect()
                         time.sleep(0.01)
                         
+                        # Add dwell time if specified to keep memory alive for measurement
+                        if job.dwell_ms > 0:
+                            time.sleep(job.dwell_ms / 1000.0)
+                        
                     elif job.mode == "sqrt":
                         # √N+fractal: build plan and use evaluator
                         sqrt_result, was_cached, plan = _run_sqrt(job.dag, job.root, job.inputs, 
@@ -249,6 +260,10 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         import gc, time
                         gc.collect()
                         time.sleep(0.01)
+                        
+                        # Add dwell time if specified to keep memory alive for measurement
+                        if job.dwell_ms > 0:
+                            time.sleep(job.dwell_ms / 1000.0)
                         
                         # Extract plan characteristics
                         unique_nodes = len(set(plan.order))
@@ -272,6 +287,12 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
     result.update(rss_ctx)
     result.update(vram_ctx) 
     result.update(energy_ctx)
+    
+    # Check RSS cap if specified
+    if rss_cap_mb > 0:
+        rss_cap_bytes = rss_cap_mb * 1024 * 1024
+        if result.get('peak_rss_bytes', 0) > rss_cap_bytes:
+            result['notes'] = f"CAP_EXCEEDED (peak_rss={result.get('peak_rss_bytes', 0)/1024/1024:.1f}MB > cap={rss_cap_mb}MB)"
     
     return result
 
@@ -417,7 +438,8 @@ def _override_repeats(jobs: List[Job], new_repeats: int, scenario_prefix: str) -
                     budget_nodes=job.budget_nodes,
                     dag=job.dag,
                     root=job.root,
-                    inputs=job.inputs
+                    inputs=job.inputs,
+                    dwell_ms=job.dwell_ms
                 )
                 # Fix name formatting
                 if job.mode == "sqrt" and job.budget_nodes is not None:
@@ -459,7 +481,8 @@ def _override_budgets(jobs: List[Job], budgets: List[int]) -> List[Job]:
                     budget_nodes=budget,
                     dag=template.dag,
                     root=template.root,
-                    inputs=template.inputs
+                    inputs=template.inputs,
+                    dwell_ms=template.dwell_ms
                 )
                 new_jobs.append(new_job)
     
@@ -508,7 +531,8 @@ def _apply_budget_sweep(jobs: List[Job]) -> List[Job]:
                     budget_nodes=budget,
                     dag=template.dag,
                     root=template.root,
-                    inputs=template.inputs
+                    inputs=template.inputs,
+                    dwell_ms=template.dwell_ms
                 )
                 new_jobs.append(new_job)
     
@@ -542,20 +566,24 @@ def _generate_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
         
         mode_budget_key = f"{mode}" + (f"-{budget}" if budget != "baseline" and budget is not None else "")
         
-        # Calculate min/mean/max for numeric fields
+        # Calculate min/mean/max/median/std for numeric fields
         numeric_fields = ['peak_rss_bytes', 'peak_vram_bytes', 'wall_s', 'cpu_s']
         aggregates = {}
         
         for field in numeric_fields:
             values = [r.get(field, 0) for r in group_results if isinstance(r.get(field), (int, float)) and r.get(field, 0) > 0]
             if values:
+                import statistics
                 aggregates[field] = {
                     'min': min(values),
                     'mean': sum(values) / len(values),
-                    'max': max(values)
+                    'max': max(values),
+                    'median': statistics.median(values),
+                    'std': statistics.stdev(values) if len(values) > 1 else 0,
+                    'count': len(values)
                 }
             else:
-                aggregates[field] = {'min': 0, 'mean': 0, 'max': 0}
+                aggregates[field] = {'min': 0, 'mean': 0, 'max': 0, 'median': 0, 'std': 0, 'count': 0}
         
         # Handle energy separately (can be "NA")
         energy_values = []
@@ -565,10 +593,14 @@ def _generate_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
                 energy_values.append(energy)
         
         if energy_values:
+            import statistics
             aggregates['energy_uj'] = {
                 'min': min(energy_values),
                 'mean': sum(energy_values) / len(energy_values),
-                'max': max(energy_values)
+                'max': max(energy_values),
+                'median': statistics.median(energy_values),
+                'std': statistics.stdev(energy_values) if len(energy_values) > 1 else 0,
+                'count': len(energy_values)
             }
         else:
             aggregates['energy_uj'] = "NA"
@@ -613,16 +645,25 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
                 sqrt_times[key] = []
             sqrt_times[key].append(wall_s)
     
-    # Calculate and print slowdown factors
+    # Calculate and print slowdown factors with variance
     print("\nSlowdown factors (sqrt/baseline):")
     for (scenario, budget), sqrt_time_list in sqrt_times.items():
-        if scenario in baseline_times:
-            sqrt_median = sorted(sqrt_time_list)[len(sqrt_time_list)//2] if sqrt_time_list else 0
-            baseline_median = sorted(baseline_times[scenario])[len(baseline_times[scenario])//2] if baseline_times[scenario] else 1
+        if scenario in baseline_times and sqrt_time_list:
+            import statistics
+            sqrt_median = statistics.median(sqrt_time_list)
+            baseline_median = statistics.median(baseline_times[scenario]) if baseline_times[scenario] else 1
             
             if baseline_median > 0:
                 slowdown = sqrt_median / baseline_median
-                print(f"  {scenario} budget={budget}: {slowdown:.2f}x")
+                sqrt_std = statistics.stdev(sqrt_time_list) if len(sqrt_time_list) > 1 else 0
+                baseline_std = statistics.stdev(baseline_times[scenario]) if len(baseline_times[scenario]) > 1 else 0
+                
+                # Show variance info if we have enough samples
+                if len(sqrt_time_list) > 2 and sqrt_std > 0:
+                    cv = sqrt_std / sqrt_median * 100  # coefficient of variation
+                    print(f"  {scenario} budget={budget}: {slowdown:.2f}x (std={sqrt_std*1000:.1f}ms, CV={cv:.1f}%)")
+                else:
+                    print(f"  {scenario} budget={budget}: {slowdown:.2f}x")
     
     # Memory usage by mode
     rss_values = [r.get('peak_rss_bytes', 0) for r in results if r.get('peak_rss_bytes', 0) > 0]
@@ -645,6 +686,13 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
             print(f"  Baseline delta RSS: {baseline_avg:.1f} MB")
             print(f"  √N delta RSS: {sqrt_avg:.1f} MB ({savings:+.1f}% vs baseline)")
     
+    # RSS cap violations (make them highly visible)
+    cap_exceeded_jobs = [r for r in results if 'CAP_EXCEEDED' in r.get('notes', '')]
+    if cap_exceeded_jobs:
+        print(f"\n⚠️  RSS CAP VIOLATIONS:")
+        for job in cap_exceeded_jobs:
+            print(f"    {job.get('job', 'unknown')}: {job.get('notes', '')}")
+    
     # Correctness
     total_correctness_jobs = sum(1 for r in results if 'correct' in r)
     correct_jobs = sum(1 for r in results if r.get('correct', False))
@@ -665,10 +713,18 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
         warm_times = [r.get('wall_s', 0) for r in sqrt_jobs if r.get('from_cache', False) and r.get('wall_s', 0) > 0]
         
         if cold_times and warm_times:
-            cold_avg = sum(cold_times) / len(cold_times)
-            warm_avg = sum(warm_times) / len(warm_times)
-            speedup = cold_avg / warm_avg if warm_avg > 0 else 1
-            print(f"  Cold (plan build): {cold_avg*1000:.1f}ms avg, Warm (cached): {warm_avg*1000:.1f}ms avg ({speedup:.1f}x speedup)")
+            import statistics
+            cold_median = statistics.median(cold_times)
+            warm_median = statistics.median(warm_times)
+            speedup = cold_median / warm_median if warm_median > 0 else 1
+            
+            # Show detailed stats if we have enough data
+            if len(cold_times) > 1 and len(warm_times) > 1:
+                cold_std = statistics.stdev(cold_times)
+                warm_std = statistics.stdev(warm_times)
+                print(f"  Cold (plan build): {cold_median*1000:.1f}ms median (±{cold_std*1000:.1f}ms), Warm (cached): {warm_median*1000:.1f}ms median (±{warm_std*1000:.1f}ms) → {speedup:.1f}x speedup")
+            else:
+                print(f"  Cold (plan build): {cold_median*1000:.1f}ms median, Warm (cached): {warm_median*1000:.1f}ms median → {speedup:.1f}x speedup")
 
     # Plan Statistics (recompute factors) 
     print("\nPlan Statistics (recompute factors):")

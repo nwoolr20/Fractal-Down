@@ -41,12 +41,13 @@ except ImportError:
 
 
 @contextmanager
-def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[str, Any], None, None]:
+def track_peak_rss(proc: Optional['psutil.Process'] = None, interval_s: float = 0.005) -> Generator[Dict[str, Any], None, None]:
     """
     Track peak resident set size (RSS) during execution.
     
     Args:
         proc: Optional psutil.Process instance. If None, uses current process.
+        interval_s: Sampling interval in seconds (default: 0.005 = 5ms for better peak detection)
         
     Yields:
         Dictionary that will contain 'peak_rss_bytes', 'pre_rss_bytes', 
@@ -105,7 +106,7 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
                 max_rss = max(max_rss, current_rss)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 break
-            time.sleep(0.005)  # 5ms sampling interval for better peak detection
+            time.sleep(interval_s)  # Configurable sampling interval for better peak detection
     
     # Start sampling thread
     sampler_thread = threading.Thread(target=rss_sampler, daemon=True)

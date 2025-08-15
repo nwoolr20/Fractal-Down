@@ -149,21 +149,23 @@ class Job:
     """A benchmark job specification."""
     
     def __init__(self, name: str, mode: str, budget_nodes: Optional[int], 
-                 dag: DAG, root: int, inputs: Dict[int, Any]):
+                 dag: DAG, root: int, inputs: Dict[int, Any], dwell_ms: int = 0):
         self.name = name
         self.mode = mode  # "baseline" or "sqrt"
         self.budget_nodes = budget_nodes  # None for baseline
         self.dag = dag
         self.root = root
         self.inputs = inputs
+        self.dwell_ms = dwell_ms  # Time in milliseconds to keep memory alive after computation
 
 
-def scenario_tiny(payload_bytes: int = 0) -> List[Job]:
+def scenario_tiny(payload_bytes: int = 0, dwell_ms: int = 0) -> List[Job]:
     """
     Generate tiny scenario jobs using make_tiny_dag().
     
     Args:
         payload_bytes: Size of payload per node in bytes (0 = small numeric values)
+        dwell_ms: Time in milliseconds to keep memory alive after computation
     
     Returns:
         List of Job objects for baseline and √N+fractal modes
@@ -188,7 +190,8 @@ def scenario_tiny(payload_bytes: int = 0) -> List[Job]:
             budget_nodes=None,
             dag=dag,
             root=root,
-            inputs=inputs
+            inputs=inputs,
+            dwell_ms=dwell_ms
         )
         jobs.append(job)
     
@@ -201,20 +204,22 @@ def scenario_tiny(payload_bytes: int = 0) -> List[Job]:
                 budget_nodes=budget,
                 dag=dag,
                 root=root,
-                inputs=inputs
+                inputs=inputs,
+                dwell_ms=dwell_ms
             )
             jobs.append(job)
     
     return jobs
 
 
-def scenario_synthetic(n_nodes: int = 200, payload_bytes: int = 0) -> List[Job]:
+def scenario_synthetic(n_nodes: int = 200, payload_bytes: int = 0, dwell_ms: int = 0) -> List[Job]:
     """
     Generate synthetic scenario with ~n_nodes DAG.
     
     Args:
         n_nodes: Target number of nodes in the synthetic DAG
         payload_bytes: Size of payload per node in bytes (0 = small numeric values)
+        dwell_ms: Time in milliseconds to keep memory alive after computation
         
     Returns:
         List of Job objects for baseline and √N+fractal modes
@@ -242,7 +247,8 @@ def scenario_synthetic(n_nodes: int = 200, payload_bytes: int = 0) -> List[Job]:
             budget_nodes=None,
             dag=dag,
             root=root,
-            inputs=inputs
+            inputs=inputs,
+            dwell_ms=dwell_ms
         )
         jobs.append(job)
     
@@ -255,7 +261,8 @@ def scenario_synthetic(n_nodes: int = 200, payload_bytes: int = 0) -> List[Job]:
                 budget_nodes=budget,
                 dag=dag,
                 root=root,
-                inputs=inputs
+                inputs=inputs,
+                dwell_ms=dwell_ms
             )
             jobs.append(job)
     
@@ -423,7 +430,7 @@ def _create_synthetic_dag(target_nodes: int, payload_bytes: int = 0, seed: int =
     return dag, root, inputs
 
 
-def scenario_memory_stress(payload_mb: int = 32) -> List[Job]:
+def scenario_memory_stress(payload_mb: int = 32, dwell_ms: int = 0) -> List[Job]:
     """
     Generate a memory stress scenario designed to cause baseline to fail while √space succeeds.
     
@@ -432,13 +439,14 @@ def scenario_memory_stress(payload_mb: int = 32) -> List[Job]:
     
     Args:
         payload_mb: Size of payload per node in MB (default 32MB for substantial pressure)
+        dwell_ms: Time in milliseconds to keep memory alive after computation
         
     Returns:
         List of Job objects for baseline and √N+fractal modes
         with a small budget that should succeed while baseline fails.
     """
     jobs = []
-    repeats = 5
+    repeats = 10  # Increased for better variance reporting
     payload_bytes = payload_mb * 1024 * 1024  # Convert MB to bytes
     
     # Create a moderately sized DAG that will cause memory growth
@@ -455,7 +463,8 @@ def scenario_memory_stress(payload_mb: int = 32) -> List[Job]:
             budget_nodes=None,
             dag=dag,
             root=root,
-            inputs=inputs
+            inputs=inputs,
+            dwell_ms=dwell_ms
         )
         jobs.append(job)
     
@@ -467,7 +476,8 @@ def scenario_memory_stress(payload_mb: int = 32) -> List[Job]:
             budget_nodes=budget,
             dag=dag,
             root=root,
-            inputs=inputs
+            inputs=inputs,
+            dwell_ms=dwell_ms
         )
         jobs.append(job)
     
