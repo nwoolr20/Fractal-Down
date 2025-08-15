@@ -1,4 +1,0 @@
-budget_nodes,correct,cpu_s,energy_uj,from_cache,job,metadata,mode,notes,peak_rss_bytes,peak_vram_bytes,repeat,scenario,wall_s
-,True,0.00015540999999996696,NA,False,synthetic/baseline/repeat_0,{'method': 'NA'},baseline,,63328256,0,0,synthetic,0.0001568430000133958
-4,True,0.0013581849999999562,NA,False,synthetic/sqrt-4/repeat_0,{'method': 'NA'},sqrt,,63459328,0,0,synthetic,0.0013580439999714145
-8,True,0.0009571359999999141,NA,False,synthetic/sqrt-8/repeat_0,{'method': 'NA'},sqrt,,63459328,0,0,synthetic,0.0009568049999870709

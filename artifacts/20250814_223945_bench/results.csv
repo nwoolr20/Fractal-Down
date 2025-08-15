@@ -1,4 +1,0 @@
-budget_nodes,correct,cpu_s,energy_uj,from_cache,job,mode,notes,peak_rss_bytes,peak_vram_bytes,repeat,scenario,wall_s
-,False,0.0,NA,False,synthetic/baseline/repeat_0,baseline,"sub expected 2 arguments, got 1",0,0,0,synthetic,0.0
-4,False,0.0,NA,False,synthetic/sqrt-4/repeat_0,sqrt,"sub expected 2 arguments, got 1",0,0,0,synthetic,0.0
-8,False,0.0,NA,False,synthetic/sqrt-8/repeat_0,sqrt,"sub expected 2 arguments, got 1",0,0,0,synthetic,0.0

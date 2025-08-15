@@ -1,7 +1,0 @@
-budget_nodes,correct,cpu_s,energy_uj,from_cache,job,metadata,mode,notes,peak_rss_bytes,peak_vram_bytes,repeat,scenario,wall_s
-,True,0.00015039999999999498,NA,False,tiny/baseline/repeat_0,{'method': 'NA'},baseline,,63586304,0,0,tiny,0.00015183400000751135
-,True,0.0001382780000001027,NA,False,tiny/baseline/repeat_1,{'method': 'NA'},baseline,,63586304,0,1,tiny,0.0001383790000772933
-2,True,0.0008963929999999953,NA,True,tiny/sqrt-2/repeat_0,{'method': 'NA'},sqrt,,63586304,0,0,tiny,0.0008960820000538661
-2,True,0.0009236240000000118,NA,True,tiny/sqrt-2/repeat_1,{'method': 'NA'},sqrt,,63586304,0,1,tiny,0.0009233829999857335
-3,True,0.0007728320000000011,NA,True,tiny/sqrt-3/repeat_0,{'method': 'NA'},sqrt,,63586304,0,0,tiny,0.0007726909999519194
-3,True,0.0007454309999999076,NA,True,tiny/sqrt-3/repeat_1,{'method': 'NA'},sqrt,,63586304,0,1,tiny,0.0007452709999142826
