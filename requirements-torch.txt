@@ -1,0 +1,2 @@
+# PyTorch support requirements for fractal-down
+torch

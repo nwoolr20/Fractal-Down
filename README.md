@@ -55,13 +55,37 @@ The core idea is that computation "descends" only where energy is high (hence "f
 
 ### Installation
 
+#### From PyPI
+
 ```bash
 pip install fractal-down
 ```
 
-Or with torch support:
+Or with optional dependencies:
 ```bash
-pip install fractal-down[torch]
+pip install fractal-down[torch]    # PyTorch support
+pip install fractal-down[test]     # Testing dependencies  
+pip install fractal-down[bench]    # Benchmarking dependencies
+```
+
+#### For Development
+
+Clone the repository and use requirements files:
+
+```bash
+git clone https://github.com/nwoolr20/FD.git
+cd FD
+
+# Install core package in editable mode
+pip install -e .
+
+# Install development dependencies (includes test, bench, and torch)
+pip install -r requirements-dev.txt
+
+# Or install specific environments:
+pip install -r requirements-test.txt   # Testing only
+pip install -r requirements-bench.txt  # Benchmarking only  
+pip install -r requirements-torch.txt  # PyTorch support only
 ```
 
 ### Basic Usage
@@ -271,6 +295,15 @@ MIT License - see LICENSE file for details.
 Contributions welcome! Please ensure all tests pass:
 
 ```bash
-pip install -e .[test]
+# Install package in development mode
+pip install -e .
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Or install dependencies using pyproject.toml (alternative method)
+pip install -e .[test,bench,torch]
+
+# Run tests
 pytest
 ```

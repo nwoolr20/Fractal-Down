@@ -1,0 +1,6 @@
+# Benchmarking requirements for fractal-down
+psutil>=5.9
+matplotlib>=3.7
+pandas>=2.0; python_version >= "3.10"
+pynvml>=11.5; platform_system=="Linux" or platform_system=="Windows"
+pyRAPL>=0.3; platform_system=="Linux"
