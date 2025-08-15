@@ -208,10 +208,20 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         result['correct'] = True  # Baseline is always "correct"
                         result['from_cache'] = False
                         
+                        # Force garbage collection and brief pause to ensure RSS measurement
+                        import gc, time
+                        gc.collect()
+                        time.sleep(0.01)
+                        
                     elif job.mode == "sqrt":
                         # √N+fractal: build plan and use evaluator
                         sqrt_result, was_cached, plan = _run_sqrt(job.dag, job.root, job.inputs, 
                                                            job.budget_nodes, verify)
+                        
+                        # Force garbage collection and brief pause to ensure RSS measurement
+                        import gc, time
+                        gc.collect()
+                        time.sleep(0.01)
                         
                         # Extract plan characteristics
                         unique_nodes = len(set(plan.order))
@@ -538,11 +548,26 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
                 slowdown = sqrt_median / baseline_median
                 print(f"  {scenario} budget={budget}: {slowdown:.2f}x")
     
-    # Memory usage
+    # Memory usage by mode
     rss_values = [r.get('peak_rss_bytes', 0) for r in results if r.get('peak_rss_bytes', 0) > 0]
+    delta_rss_values = [r.get('delta_rss_bytes', 0) for r in results if r.get('delta_rss_bytes', 0) > 0]
+    baseline_delta_rss = [r.get('delta_rss_bytes', 0) for r in results if r.get('mode') == 'baseline' and r.get('delta_rss_bytes', 0) > 0]
+    sqrt_delta_rss = [r.get('delta_rss_bytes', 0) for r in results if r.get('mode') == 'sqrt' and r.get('delta_rss_bytes', 0) > 0]
+    
     if rss_values:
         avg_rss_mb = sum(rss_values) / len(rss_values) / (1024*1024)
         print(f"\nAverage peak RSS: {avg_rss_mb:.1f} MB")
+    
+    if delta_rss_values:
+        avg_delta_rss_mb = sum(delta_rss_values) / len(delta_rss_values) / (1024*1024)
+        print(f"Average delta RSS: {avg_delta_rss_mb:.1f} MB")
+        
+        if baseline_delta_rss and sqrt_delta_rss:
+            baseline_avg = sum(baseline_delta_rss) / len(baseline_delta_rss) / (1024*1024)
+            sqrt_avg = sum(sqrt_delta_rss) / len(sqrt_delta_rss) / (1024*1024)
+            savings = ((baseline_avg - sqrt_avg) / baseline_avg * 100) if baseline_avg > 0 else 0
+            print(f"  Baseline delta RSS: {baseline_avg:.1f} MB")
+            print(f"  √N delta RSS: {sqrt_avg:.1f} MB ({savings:+.1f}% vs baseline)")
     
     # Correctness
     total_correctness_jobs = sum(1 for r in results if 'correct' in r)
@@ -551,12 +576,23 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
         parity_pct = correct_jobs / total_correctness_jobs * 100
         print(f"Correctness: {correct_jobs}/{total_correctness_jobs} ({parity_pct:.1f}%)")
     
-    # Cache hits
+    # Cache hits with warm/cold breakdown
     sqrt_jobs = [r for r in results if r.get('mode') == 'sqrt']
     if sqrt_jobs:
         cache_hits = sum(1 for r in sqrt_jobs if r.get('from_cache', False))
+        cache_misses = len(sqrt_jobs) - cache_hits
         cache_rate = cache_hits / len(sqrt_jobs) * 100
-        print(f"Cache hit rate: {cache_hits}/{len(sqrt_jobs)} ({cache_rate:.1f}%)")
+        print(f"Cache performance: {cache_hits} hits, {cache_misses} misses ({cache_rate:.1f}% hit rate)")
+        
+        # Show timing difference between cold and warm
+        cold_times = [r.get('wall_s', 0) for r in sqrt_jobs if not r.get('from_cache', False) and r.get('wall_s', 0) > 0]
+        warm_times = [r.get('wall_s', 0) for r in sqrt_jobs if r.get('from_cache', False) and r.get('wall_s', 0) > 0]
+        
+        if cold_times and warm_times:
+            cold_avg = sum(cold_times) / len(cold_times)
+            warm_avg = sum(warm_times) / len(warm_times)
+            speedup = cold_avg / warm_avg if warm_avg > 0 else 1
+            print(f"  Cold (plan build): {cold_avg*1000:.1f}ms avg, Warm (cached): {warm_avg*1000:.1f}ms avg ({speedup:.1f}x speedup)")
 
 
 if __name__ == "__main__":

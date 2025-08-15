@@ -71,8 +71,14 @@ class PayloadedValue:
     def __add__(self, other):
         other_val = other.value if isinstance(other, PayloadedValue) else other
         result_val = self.value + other_val
-        # Create new payload for result
-        return PayloadedValue(result_val, self.payload)
+        # Create new payload for result - make it bigger to show memory growth
+        import numpy as np
+        try:
+            new_payload_size = max(len(self.payload), getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0)
+            new_payload = np.random.rand(new_payload_size).astype(np.float64)
+            return PayloadedValue(result_val, new_payload)
+        except:
+            return PayloadedValue(result_val, self.payload)
     
     def __radd__(self, other):
         return self.__add__(other)
@@ -80,7 +86,14 @@ class PayloadedValue:
     def __mul__(self, other):
         other_val = other.value if isinstance(other, PayloadedValue) else other
         result_val = self.value * other_val
-        return PayloadedValue(result_val, self.payload)
+        # Create new payload for result - make it bigger to show memory growth  
+        import numpy as np
+        try:
+            new_payload_size = max(len(self.payload), getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0)
+            new_payload = np.random.rand(new_payload_size).astype(np.float64)
+            return PayloadedValue(result_val, new_payload)
+        except:
+            return PayloadedValue(result_val, self.payload)
     
     def __rmul__(self, other):
         return self.__mul__(other)
