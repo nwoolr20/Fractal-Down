@@ -25,4 +25,5 @@ tests/test_evaluator.py
 tests/test_examples.py
 tests/test_fractal.py
 tests/test_memory_improvements.py
+tests/test_requirements.py
 tests/test_treelift.py
