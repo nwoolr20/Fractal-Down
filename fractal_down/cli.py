@@ -66,7 +66,7 @@ def main():
     bench_parser = subparsers.add_parser('bench',
                                         help='Run benchmark and verification suite')
     bench_parser.add_argument('--scenarios', nargs='+',
-                             choices=['tiny', 'synthetic'],
+                             choices=['tiny', 'synthetic', 'memory-stress'],
                              default=['tiny', 'synthetic'],
                              help='Scenarios to run')
     bench_parser.add_argument('--synthetic-n', type=int, default=200,
@@ -79,6 +79,18 @@ def main():
                              help='Enable evaluator verification')
     bench_parser.add_argument('--outdir', type=str,
                              help='Output directory (default: artifacts/<timestamp>/)')
+    bench_parser.add_argument('--payload-bytes', type=int, default=0,
+                             help='Size of payload per node in bytes (default: 0)')
+    bench_parser.add_argument('--dwell-ms', type=int, default=0,
+                             help='Time in milliseconds to keep memory alive after computation (default: 0)')
+    bench_parser.add_argument('--rss-cap-mb', type=int, default=0,
+                             help='RSS cap in MB for baseline-stress detection (default: 0=disabled)')
+    bench_parser.add_argument('--memory-stress-mb', type=int, default=32,
+                             help='Memory payload size in MB for memory-stress scenario (default: 32)')
+    bench_parser.add_argument('--budget-sweep', action='store_true',
+                             help='Auto-generate budgets around √N for scenario')
+    bench_parser.add_argument('--clear-plan-cache', action='store_true',
+                             help='Clear plan cache before running')
     
     args = parser.parse_args()
     
@@ -312,6 +324,25 @@ def cmd_bench(args) -> int:
         
         if args.outdir:
             bench_args.extend(['--outdir', args.outdir])
+        
+        # Forward additional parameters
+        if hasattr(args, 'payload_bytes') and args.payload_bytes != 0:
+            bench_args.extend(['--payload-bytes', str(args.payload_bytes)])
+        
+        if hasattr(args, 'dwell_ms') and args.dwell_ms != 0:
+            bench_args.extend(['--dwell-ms', str(args.dwell_ms)])
+        
+        if hasattr(args, 'rss_cap_mb') and args.rss_cap_mb != 0:
+            bench_args.extend(['--rss-cap-mb', str(args.rss_cap_mb)])
+        
+        if hasattr(args, 'memory_stress_mb') and args.memory_stress_mb != 32:
+            bench_args.extend(['--memory-stress-mb', str(args.memory_stress_mb)])
+        
+        if hasattr(args, 'budget_sweep') and args.budget_sweep:
+            bench_args.append('--budget-sweep')
+        
+        if hasattr(args, 'clear_plan_cache') and args.clear_plan_cache:
+            bench_args.append('--clear-plan-cache')
         
         return bench.run_suite.main(bench_args)
         
