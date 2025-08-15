@@ -60,6 +60,12 @@ def main(args: Optional[List[str]] = None) -> int:
     parser.add_argument('--verify', action='store_true',
                        help='Enable evaluator verification')
     
+    parser.add_argument('--payload-bytes', type=int, default=0,
+                       help='Size of payload per node in bytes (default: 0, creates large intermediates for memory pressure)')
+    
+    parser.add_argument('--budget-sweep', action='store_true',
+                       help='Auto-generate budgets around √N for scenario (overrides --budgets)')
+    
     parsed_args = parser.parse_args(args)
     
     # Create run directory
@@ -80,7 +86,7 @@ def main(args: Optional[List[str]] = None) -> int:
     jobs = []
     
     if 'tiny' in parsed_args.scenarios:
-        tiny_jobs = scenario_tiny()
+        tiny_jobs = scenario_tiny(parsed_args.payload_bytes)
         # Override repeats if specified
         if parsed_args.repeats != 5:  # 5 is default for tiny
             tiny_jobs = _override_repeats(tiny_jobs, parsed_args.repeats, 'tiny')
@@ -88,7 +94,7 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(tiny_jobs)} tiny scenario jobs")
     
     if 'synthetic' in parsed_args.scenarios:
-        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n)
+        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n, parsed_args.payload_bytes)
         # Override repeats if specified
         if parsed_args.repeats != 10:  # 10 is default for synthetic
             synthetic_jobs = _override_repeats(synthetic_jobs, parsed_args.repeats, 'synthetic')
@@ -96,7 +102,11 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(synthetic_jobs)} synthetic scenario jobs")
     
     # Override budgets if specified
-    if parsed_args.budgets:
+    if parsed_args.budget_sweep:
+        # Auto-generate budgets around √N for each scenario
+        jobs = _apply_budget_sweep(jobs)
+        print("Applied budget sweep (auto-generated budgets around √N)")
+    elif parsed_args.budgets:
         try:
             custom_budgets = [int(b.strip()) for b in parsed_args.budgets.split(',')]
             jobs = _override_budgets(jobs, custom_budgets)
@@ -186,7 +196,11 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
         'energy_uj': "NA",
         'correct': False,
         'from_cache': False,
-        'notes': ""
+        'notes': "",
+        # Plan characteristics (for sqrt mode)
+        'unique_nodes': None,
+        'order_len': None, 
+        'recompute_factor': None
     }
     
     # Run with nested context managers for metrics collection
@@ -201,10 +215,29 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         result['correct'] = True  # Baseline is always "correct"
                         result['from_cache'] = False
                         
+                        # Force garbage collection and brief pause to ensure RSS measurement
+                        import gc, time
+                        gc.collect()
+                        time.sleep(0.01)
+                        
                     elif job.mode == "sqrt":
                         # √N+fractal: build plan and use evaluator
-                        sqrt_result, was_cached = _run_sqrt(job.dag, job.root, job.inputs, 
+                        sqrt_result, was_cached, plan = _run_sqrt(job.dag, job.root, job.inputs, 
                                                            job.budget_nodes, verify)
+                        
+                        # Force garbage collection and brief pause to ensure RSS measurement
+                        import gc, time
+                        gc.collect()
+                        time.sleep(0.01)
+                        
+                        # Extract plan characteristics
+                        unique_nodes = len(set(plan.order))
+                        order_len = len(plan.order)
+                        recompute_factor = order_len / unique_nodes if unique_nodes > 0 else 1.0
+                        
+                        result['unique_nodes'] = unique_nodes
+                        result['order_len'] = order_len
+                        result['recompute_factor'] = recompute_factor
                         
                         # Check correctness against baseline if possible
                         baseline_result = _run_baseline(job.dag, job.root, job.inputs)
@@ -299,7 +332,7 @@ def _run_sqrt(dag: DAG, root: int, inputs: Dict[int, Any],
     Run √N+fractal evaluation with plan building and caching.
     
     Returns:
-        Tuple of (EvalResult, was_cached)
+        Tuple of (EvalResult, was_cached, Plan)
     """
     # Compute priorities
     params = FractalParams()
@@ -316,7 +349,7 @@ def _run_sqrt(dag: DAG, root: int, inputs: Dict[int, Any],
     evaluator = Evaluator(dag, inputs)
     result = evaluator.run(plan, verify=verify)
     
-    return result, was_cached
+    return result, was_cached, plan
 
 
 def _extract_repeat_number(job_name: str) -> int:
@@ -399,6 +432,55 @@ def _override_budgets(jobs: List[Job], budgets: List[int]) -> List[Job]:
             # Count number of baseline repeats for this scenario
             baseline_count = len([j for j in baseline_jobs if j.name.startswith(scenario + "/")])
             
+            for repeat in range(baseline_count):
+                new_job = Job(
+                    name=f"{scenario}/sqrt-{budget}/repeat_{repeat}",
+                    mode="sqrt",
+                    budget_nodes=budget,
+                    dag=template.dag,
+                    root=template.root,
+                    inputs=template.inputs
+                )
+                new_jobs.append(new_job)
+    
+    return new_jobs
+
+
+def _apply_budget_sweep(jobs: List[Job]) -> List[Job]:
+    """Apply budget sweep - auto-generate budgets around √N for each scenario."""
+    import math
+    
+    new_jobs = []
+    
+    # Keep all baseline jobs
+    baseline_jobs = [job for job in jobs if job.mode == "baseline"]
+    new_jobs.extend(baseline_jobs)
+    
+    # Group sqrt jobs by scenario and determine optimal budgets
+    sqrt_job_templates = {}
+    for job in jobs:
+        if job.mode == "sqrt":
+            scenario = job.name.split('/')[0]
+            if scenario not in sqrt_job_templates:
+                sqrt_job_templates[scenario] = job
+    
+    # For each scenario, compute √N and create budget sweep
+    for scenario, template in sqrt_job_templates.items():
+        # Get number of nodes in DAG
+        n_nodes = len(template.dag.postorder(template.root))
+        sqrt_n = math.ceil(math.sqrt(n_nodes))
+        
+        # Generate budgets: [√N/2, √N, 2√N]  
+        budgets = [
+            max(1, sqrt_n // 2),
+            sqrt_n,
+            2 * sqrt_n
+        ]
+        
+        # Count baseline repeats for this scenario  
+        baseline_count = len([j for j in baseline_jobs if j.name.startswith(scenario + "/")])
+        
+        for budget in budgets:
             for repeat in range(baseline_count):
                 new_job = Job(
                     name=f"{scenario}/sqrt-{budget}/repeat_{repeat}",
@@ -522,11 +604,26 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
                 slowdown = sqrt_median / baseline_median
                 print(f"  {scenario} budget={budget}: {slowdown:.2f}x")
     
-    # Memory usage
+    # Memory usage by mode
     rss_values = [r.get('peak_rss_bytes', 0) for r in results if r.get('peak_rss_bytes', 0) > 0]
+    delta_rss_values = [r.get('delta_rss_bytes', 0) for r in results if r.get('delta_rss_bytes', 0) > 0]
+    baseline_delta_rss = [r.get('delta_rss_bytes', 0) for r in results if r.get('mode') == 'baseline' and r.get('delta_rss_bytes', 0) > 0]
+    sqrt_delta_rss = [r.get('delta_rss_bytes', 0) for r in results if r.get('mode') == 'sqrt' and r.get('delta_rss_bytes', 0) > 0]
+    
     if rss_values:
         avg_rss_mb = sum(rss_values) / len(rss_values) / (1024*1024)
         print(f"\nAverage peak RSS: {avg_rss_mb:.1f} MB")
+    
+    if delta_rss_values:
+        avg_delta_rss_mb = sum(delta_rss_values) / len(delta_rss_values) / (1024*1024)
+        print(f"Average delta RSS: {avg_delta_rss_mb:.1f} MB")
+        
+        if baseline_delta_rss and sqrt_delta_rss:
+            baseline_avg = sum(baseline_delta_rss) / len(baseline_delta_rss) / (1024*1024)
+            sqrt_avg = sum(sqrt_delta_rss) / len(sqrt_delta_rss) / (1024*1024)
+            savings = ((baseline_avg - sqrt_avg) / baseline_avg * 100) if baseline_avg > 0 else 0
+            print(f"  Baseline delta RSS: {baseline_avg:.1f} MB")
+            print(f"  √N delta RSS: {sqrt_avg:.1f} MB ({savings:+.1f}% vs baseline)")
     
     # Correctness
     total_correctness_jobs = sum(1 for r in results if 'correct' in r)
@@ -535,12 +632,27 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
         parity_pct = correct_jobs / total_correctness_jobs * 100
         print(f"Correctness: {correct_jobs}/{total_correctness_jobs} ({parity_pct:.1f}%)")
     
-    # Cache hits
+    # Cache hits with warm/cold breakdown
     sqrt_jobs = [r for r in results if r.get('mode') == 'sqrt']
     if sqrt_jobs:
         cache_hits = sum(1 for r in sqrt_jobs if r.get('from_cache', False))
+        cache_misses = len(sqrt_jobs) - cache_hits
         cache_rate = cache_hits / len(sqrt_jobs) * 100
-        print(f"Cache hit rate: {cache_hits}/{len(sqrt_jobs)} ({cache_rate:.1f}%)")
+        print(f"Cache performance: {cache_hits} hits, {cache_misses} misses ({cache_rate:.1f}% hit rate)")
+        
+        # Show timing difference between cold and warm
+        cold_times = [r.get('wall_s', 0) for r in sqrt_jobs if not r.get('from_cache', False) and r.get('wall_s', 0) > 0]
+        warm_times = [r.get('wall_s', 0) for r in sqrt_jobs if r.get('from_cache', False) and r.get('wall_s', 0) > 0]
+        
+        if cold_times and warm_times:
+            cold_avg = sum(cold_times) / len(cold_times)
+            warm_avg = sum(warm_times) / len(warm_times)
+            speedup = cold_avg / warm_avg if warm_avg > 0 else 1
+            print(f"  Cold (plan build): {cold_avg*1000:.1f}ms avg, Warm (cached): {warm_avg*1000:.1f}ms avg ({speedup:.1f}x speedup)")
+
+    # Add non-goals note
+    print(f"\nNote: Slowdown is expected but bounded. √N+fractal trades speed for memory.")
+    print(f"Not a distributed scheduler - single process only. Tune FractalParams per domain.")
 
 
 if __name__ == "__main__":
