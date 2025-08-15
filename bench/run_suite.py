@@ -63,6 +63,9 @@ def main(args: Optional[List[str]] = None) -> int:
     parser.add_argument('--payload-bytes', type=int, default=0,
                        help='Size of payload per node in bytes (default: 0, creates large intermediates for memory pressure)')
     
+    parser.add_argument('--budget-sweep', action='store_true',
+                       help='Auto-generate budgets around √N for scenario (overrides --budgets)')
+    
     parsed_args = parser.parse_args(args)
     
     # Create run directory
@@ -99,7 +102,11 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(synthetic_jobs)} synthetic scenario jobs")
     
     # Override budgets if specified
-    if parsed_args.budgets:
+    if parsed_args.budget_sweep:
+        # Auto-generate budgets around √N for each scenario
+        jobs = _apply_budget_sweep(jobs)
+        print("Applied budget sweep (auto-generated budgets around √N)")
+    elif parsed_args.budgets:
         try:
             custom_budgets = [int(b.strip()) for b in parsed_args.budgets.split(',')]
             jobs = _override_budgets(jobs, custom_budgets)
@@ -439,6 +446,55 @@ def _override_budgets(jobs: List[Job], budgets: List[int]) -> List[Job]:
     return new_jobs
 
 
+def _apply_budget_sweep(jobs: List[Job]) -> List[Job]:
+    """Apply budget sweep - auto-generate budgets around √N for each scenario."""
+    import math
+    
+    new_jobs = []
+    
+    # Keep all baseline jobs
+    baseline_jobs = [job for job in jobs if job.mode == "baseline"]
+    new_jobs.extend(baseline_jobs)
+    
+    # Group sqrt jobs by scenario and determine optimal budgets
+    sqrt_job_templates = {}
+    for job in jobs:
+        if job.mode == "sqrt":
+            scenario = job.name.split('/')[0]
+            if scenario not in sqrt_job_templates:
+                sqrt_job_templates[scenario] = job
+    
+    # For each scenario, compute √N and create budget sweep
+    for scenario, template in sqrt_job_templates.items():
+        # Get number of nodes in DAG
+        n_nodes = len(template.dag.postorder(template.root))
+        sqrt_n = math.ceil(math.sqrt(n_nodes))
+        
+        # Generate budgets: [√N/2, √N, 2√N]  
+        budgets = [
+            max(1, sqrt_n // 2),
+            sqrt_n,
+            2 * sqrt_n
+        ]
+        
+        # Count baseline repeats for this scenario  
+        baseline_count = len([j for j in baseline_jobs if j.name.startswith(scenario + "/")])
+        
+        for budget in budgets:
+            for repeat in range(baseline_count):
+                new_job = Job(
+                    name=f"{scenario}/sqrt-{budget}/repeat_{repeat}",
+                    mode="sqrt",
+                    budget_nodes=budget,
+                    dag=template.dag,
+                    root=template.root,
+                    inputs=template.inputs
+                )
+                new_jobs.append(new_job)
+    
+    return new_jobs
+
+
 def _generate_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Generate summary statistics from results."""
     summary = {
@@ -593,6 +649,10 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
             warm_avg = sum(warm_times) / len(warm_times)
             speedup = cold_avg / warm_avg if warm_avg > 0 else 1
             print(f"  Cold (plan build): {cold_avg*1000:.1f}ms avg, Warm (cached): {warm_avg*1000:.1f}ms avg ({speedup:.1f}x speedup)")
+
+    # Add non-goals note
+    print(f"\nNote: Slowdown is expected but bounded. √N+fractal trades speed for memory.")
+    print(f"Not a distributed scheduler - single process only. Tune FractalParams per domain.")
 
 
 if __name__ == "__main__":
