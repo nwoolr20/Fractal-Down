@@ -72,6 +72,12 @@ def main(args: Optional[List[str]] = None) -> int:
     parser.add_argument('--memory-stress-mb', type=int, default=32,
                        help='Memory payload size in MB for memory-stress scenario (default: 32)')
     
+    parser.add_argument('--dwell-ms', type=int, default=0,
+                       help='Time in milliseconds to keep memory alive after computation (default: 0, helps capture peak RSS)')
+    
+    parser.add_argument('--rss-cap-mb', type=int, default=0,
+                       help='RSS cap in MB for baseline-stress detection (default: 0=disabled, marks jobs that exceed this as CAP_EXCEEDED)')
+    
     parsed_args = parser.parse_args(args)
     
     # Create run directory
@@ -92,7 +98,7 @@ def main(args: Optional[List[str]] = None) -> int:
     jobs = []
     
     if 'tiny' in parsed_args.scenarios:
-        tiny_jobs = scenario_tiny(parsed_args.payload_bytes)
+        tiny_jobs = scenario_tiny(parsed_args.payload_bytes, parsed_args.dwell_ms)
         # Override repeats if specified
         if parsed_args.repeats != 5:  # 5 is default for tiny
             tiny_jobs = _override_repeats(tiny_jobs, parsed_args.repeats, 'tiny')
@@ -100,7 +106,7 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(tiny_jobs)} tiny scenario jobs")
     
     if 'synthetic' in parsed_args.scenarios:
-        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n, parsed_args.payload_bytes)
+        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n, parsed_args.payload_bytes, parsed_args.dwell_ms)
         # Override repeats if specified
         if parsed_args.repeats != 10:  # 10 is default for synthetic
             synthetic_jobs = _override_repeats(synthetic_jobs, parsed_args.repeats, 'synthetic')
@@ -108,9 +114,9 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(synthetic_jobs)} synthetic scenario jobs")
     
     if 'memory-stress' in parsed_args.scenarios:
-        memory_jobs = scenario_memory_stress(parsed_args.memory_stress_mb)
+        memory_jobs = scenario_memory_stress(parsed_args.memory_stress_mb, parsed_args.dwell_ms)
         # Override repeats if specified
-        if parsed_args.repeats != 5:  # 5 is default for memory-stress
+        if parsed_args.repeats != 10:  # 10 is default for memory-stress
             memory_jobs = _override_repeats(memory_jobs, parsed_args.repeats, 'memory-stress')
         jobs.extend(memory_jobs)
         print(f"Generated {len(memory_jobs)} memory-stress scenario jobs")
@@ -148,7 +154,7 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Running job {i+1}/{len(jobs)}: {job.name}")
         
         try:
-            result = _run_single_job(job, parsed_args.verify)
+            result = _run_single_job(job, parsed_args.verify, parsed_args.rss_cap_mb)
             results.append(result)
         except Exception as e:
             print(f"  ERROR: {e}")
@@ -192,13 +198,14 @@ def main(args: Optional[List[str]] = None) -> int:
     return 0
 
 
-def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
+def _run_single_job(job: Job, verify: bool = False, rss_cap_mb: int = 0) -> Dict[str, Any]:
     """
     Run a single benchmark job and collect all metrics.
     
     Args:
         job: Job specification
         verify: Whether to enable verification
+        rss_cap_mb: RSS cap in MB for baseline-stress detection (0=disabled)
         
     Returns:
         Dictionary with all collected metrics
@@ -240,6 +247,10 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         gc.collect()
                         time.sleep(0.01)
                         
+                        # Add dwell time if specified to keep memory alive for measurement
+                        if job.dwell_ms > 0:
+                            time.sleep(job.dwell_ms / 1000.0)
+                        
                     elif job.mode == "sqrt":
                         # √N+fractal: build plan and use evaluator
                         sqrt_result, was_cached, plan = _run_sqrt(job.dag, job.root, job.inputs, 
@@ -249,6 +260,10 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         import gc, time
                         gc.collect()
                         time.sleep(0.01)
+                        
+                        # Add dwell time if specified to keep memory alive for measurement
+                        if job.dwell_ms > 0:
+                            time.sleep(job.dwell_ms / 1000.0)
                         
                         # Extract plan characteristics
                         unique_nodes = len(set(plan.order))
@@ -272,6 +287,12 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
     result.update(rss_ctx)
     result.update(vram_ctx) 
     result.update(energy_ctx)
+    
+    # Check RSS cap if specified
+    if rss_cap_mb > 0:
+        rss_cap_bytes = rss_cap_mb * 1024 * 1024
+        if result.get('peak_rss_bytes', 0) > rss_cap_bytes:
+            result['notes'] = f"CAP_EXCEEDED (peak_rss={result.get('peak_rss_bytes', 0)/1024/1024:.1f}MB > cap={rss_cap_mb}MB)"
     
     return result
 
@@ -417,7 +438,8 @@ def _override_repeats(jobs: List[Job], new_repeats: int, scenario_prefix: str) -
                     budget_nodes=job.budget_nodes,
                     dag=job.dag,
                     root=job.root,
-                    inputs=job.inputs
+                    inputs=job.inputs,
+                    dwell_ms=job.dwell_ms
                 )
                 # Fix name formatting
                 if job.mode == "sqrt" and job.budget_nodes is not None:
@@ -459,7 +481,8 @@ def _override_budgets(jobs: List[Job], budgets: List[int]) -> List[Job]:
                     budget_nodes=budget,
                     dag=template.dag,
                     root=template.root,
-                    inputs=template.inputs
+                    inputs=template.inputs,
+                    dwell_ms=template.dwell_ms
                 )
                 new_jobs.append(new_job)
     
@@ -508,7 +531,8 @@ def _apply_budget_sweep(jobs: List[Job]) -> List[Job]:
                     budget_nodes=budget,
                     dag=template.dag,
                     root=template.root,
-                    inputs=template.inputs
+                    inputs=template.inputs,
+                    dwell_ms=template.dwell_ms
                 )
                 new_jobs.append(new_job)
     
