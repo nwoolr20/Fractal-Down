@@ -566,20 +566,24 @@ def _generate_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
         
         mode_budget_key = f"{mode}" + (f"-{budget}" if budget != "baseline" and budget is not None else "")
         
-        # Calculate min/mean/max for numeric fields
+        # Calculate min/mean/max/median/std for numeric fields
         numeric_fields = ['peak_rss_bytes', 'peak_vram_bytes', 'wall_s', 'cpu_s']
         aggregates = {}
         
         for field in numeric_fields:
             values = [r.get(field, 0) for r in group_results if isinstance(r.get(field), (int, float)) and r.get(field, 0) > 0]
             if values:
+                import statistics
                 aggregates[field] = {
                     'min': min(values),
                     'mean': sum(values) / len(values),
-                    'max': max(values)
+                    'max': max(values),
+                    'median': statistics.median(values),
+                    'std': statistics.stdev(values) if len(values) > 1 else 0,
+                    'count': len(values)
                 }
             else:
-                aggregates[field] = {'min': 0, 'mean': 0, 'max': 0}
+                aggregates[field] = {'min': 0, 'mean': 0, 'max': 0, 'median': 0, 'std': 0, 'count': 0}
         
         # Handle energy separately (can be "NA")
         energy_values = []
@@ -589,10 +593,14 @@ def _generate_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
                 energy_values.append(energy)
         
         if energy_values:
+            import statistics
             aggregates['energy_uj'] = {
                 'min': min(energy_values),
                 'mean': sum(energy_values) / len(energy_values),
-                'max': max(energy_values)
+                'max': max(energy_values),
+                'median': statistics.median(energy_values),
+                'std': statistics.stdev(energy_values) if len(energy_values) > 1 else 0,
+                'count': len(energy_values)
             }
         else:
             aggregates['energy_uj'] = "NA"
@@ -637,16 +645,25 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
                 sqrt_times[key] = []
             sqrt_times[key].append(wall_s)
     
-    # Calculate and print slowdown factors
+    # Calculate and print slowdown factors with variance
     print("\nSlowdown factors (sqrt/baseline):")
     for (scenario, budget), sqrt_time_list in sqrt_times.items():
-        if scenario in baseline_times:
-            sqrt_median = sorted(sqrt_time_list)[len(sqrt_time_list)//2] if sqrt_time_list else 0
-            baseline_median = sorted(baseline_times[scenario])[len(baseline_times[scenario])//2] if baseline_times[scenario] else 1
+        if scenario in baseline_times and sqrt_time_list:
+            import statistics
+            sqrt_median = statistics.median(sqrt_time_list)
+            baseline_median = statistics.median(baseline_times[scenario]) if baseline_times[scenario] else 1
             
             if baseline_median > 0:
                 slowdown = sqrt_median / baseline_median
-                print(f"  {scenario} budget={budget}: {slowdown:.2f}x")
+                sqrt_std = statistics.stdev(sqrt_time_list) if len(sqrt_time_list) > 1 else 0
+                baseline_std = statistics.stdev(baseline_times[scenario]) if len(baseline_times[scenario]) > 1 else 0
+                
+                # Show variance info if we have enough samples
+                if len(sqrt_time_list) > 2 and sqrt_std > 0:
+                    cv = sqrt_std / sqrt_median * 100  # coefficient of variation
+                    print(f"  {scenario} budget={budget}: {slowdown:.2f}x (std={sqrt_std*1000:.1f}ms, CV={cv:.1f}%)")
+                else:
+                    print(f"  {scenario} budget={budget}: {slowdown:.2f}x")
     
     # Memory usage by mode
     rss_values = [r.get('peak_rss_bytes', 0) for r in results if r.get('peak_rss_bytes', 0) > 0]
@@ -669,6 +686,13 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
             print(f"  Baseline delta RSS: {baseline_avg:.1f} MB")
             print(f"  √N delta RSS: {sqrt_avg:.1f} MB ({savings:+.1f}% vs baseline)")
     
+    # RSS cap violations (make them highly visible)
+    cap_exceeded_jobs = [r for r in results if 'CAP_EXCEEDED' in r.get('notes', '')]
+    if cap_exceeded_jobs:
+        print(f"\n⚠️  RSS CAP VIOLATIONS:")
+        for job in cap_exceeded_jobs:
+            print(f"    {job.get('job', 'unknown')}: {job.get('notes', '')}")
+    
     # Correctness
     total_correctness_jobs = sum(1 for r in results if 'correct' in r)
     correct_jobs = sum(1 for r in results if r.get('correct', False))
@@ -689,10 +713,18 @@ def _print_console_summary(results: List[Dict[str, Any]]) -> None:
         warm_times = [r.get('wall_s', 0) for r in sqrt_jobs if r.get('from_cache', False) and r.get('wall_s', 0) > 0]
         
         if cold_times and warm_times:
-            cold_avg = sum(cold_times) / len(cold_times)
-            warm_avg = sum(warm_times) / len(warm_times)
-            speedup = cold_avg / warm_avg if warm_avg > 0 else 1
-            print(f"  Cold (plan build): {cold_avg*1000:.1f}ms avg, Warm (cached): {warm_avg*1000:.1f}ms avg ({speedup:.1f}x speedup)")
+            import statistics
+            cold_median = statistics.median(cold_times)
+            warm_median = statistics.median(warm_times)
+            speedup = cold_median / warm_median if warm_median > 0 else 1
+            
+            # Show detailed stats if we have enough data
+            if len(cold_times) > 1 and len(warm_times) > 1:
+                cold_std = statistics.stdev(cold_times)
+                warm_std = statistics.stdev(warm_times)
+                print(f"  Cold (plan build): {cold_median*1000:.1f}ms median (±{cold_std*1000:.1f}ms), Warm (cached): {warm_median*1000:.1f}ms median (±{warm_std*1000:.1f}ms) → {speedup:.1f}x speedup")
+            else:
+                print(f"  Cold (plan build): {cold_median*1000:.1f}ms median, Warm (cached): {warm_median*1000:.1f}ms median → {speedup:.1f}x speedup")
 
     # Plan Statistics (recompute factors) 
     print("\nPlan Statistics (recompute factors):")
