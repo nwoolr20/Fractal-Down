@@ -31,8 +31,8 @@ def _add_payload_to_inputs(inputs: Dict[int, Any], payload_bytes: int) -> Dict[i
     
     # Create a large bytes object as payload
     # Use a simple pattern that compresses poorly to simulate real data
-    import numpy as np
     try:
+        import numpy as np
         # Use numpy arrays if available for more realistic memory usage
         # Each float64 is 8 bytes, so we need payload_bytes // 8 elements
         array_size = max(1, payload_bytes // 8)
@@ -72,13 +72,23 @@ class PayloadedValue:
         other_val = other.value if isinstance(other, PayloadedValue) else other
         result_val = self.value + other_val
         # Create new payload for result - make it bigger to show memory growth
-        import numpy as np
         try:
-            new_payload_size = max(len(self.payload), getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0)
+            import numpy as np
+            # Combine payloads and add some growth to simulate computation overhead
+            self_size = len(self.payload)
+            other_size = getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0
+            new_payload_size = max(self_size, other_size) + max(1000, self_size // 10)  # Add 10% growth + minimum
             new_payload = np.random.rand(new_payload_size).astype(np.float64)
             return PayloadedValue(result_val, new_payload)
-        except:
-            return PayloadedValue(result_val, self.payload)
+        except ImportError:
+            # Fallback to bytes-based payload growth
+            self_size = len(self.payload) if hasattr(self.payload, '__len__') else 0
+            other_size = getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0
+            new_size = max(self_size, other_size) + max(100, self_size // 10)  # Add 10% growth + minimum
+            # Create payload with some variation
+            payload_template = bytes(range(256)) * (new_size // 256 + 1)
+            new_payload = payload_template[:new_size]
+            return PayloadedValue(result_val, new_payload)
     
     def __radd__(self, other):
         return self.__add__(other)
@@ -87,13 +97,22 @@ class PayloadedValue:
         other_val = other.value if isinstance(other, PayloadedValue) else other
         result_val = self.value * other_val
         # Create new payload for result - make it bigger to show memory growth  
-        import numpy as np
         try:
-            new_payload_size = max(len(self.payload), getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0)
+            import numpy as np
+            self_size = len(self.payload)
+            other_size = getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0
+            new_payload_size = max(self_size, other_size) + max(1000, self_size // 8)  # Add 12.5% growth + minimum
             new_payload = np.random.rand(new_payload_size).astype(np.float64)
             return PayloadedValue(result_val, new_payload)
-        except:
-            return PayloadedValue(result_val, self.payload)
+        except ImportError:
+            # Fallback to bytes-based payload growth
+            self_size = len(self.payload) if hasattr(self.payload, '__len__') else 0
+            other_size = getattr(other, 'payload', [0]).__len__() if hasattr(getattr(other, 'payload', [0]), '__len__') else 0
+            new_size = max(self_size, other_size) + max(100, self_size // 8)  # Add 12.5% growth + minimum
+            # Create payload with some variation
+            payload_template = bytes(range(256)) * (new_size // 256 + 1)
+            new_payload = payload_template[:new_size]
+            return PayloadedValue(result_val, new_payload)
     
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -402,3 +421,54 @@ def _create_synthetic_dag(target_nodes: int, payload_bytes: int = 0, seed: int =
         root = leaf_ids[0]
     
     return dag, root, inputs
+
+
+def scenario_memory_stress(payload_mb: int = 32) -> List[Job]:
+    """
+    Generate a memory stress scenario designed to cause baseline to fail while √space succeeds.
+    
+    This creates a DAG with large memory requirements that grows exponentially,
+    designed to exceed memory limits with baseline evaluation but succeed with bounded √space.
+    
+    Args:
+        payload_mb: Size of payload per node in MB (default 32MB for substantial pressure)
+        
+    Returns:
+        List of Job objects for baseline and √N+fractal modes
+        with a small budget that should succeed while baseline fails.
+    """
+    jobs = []
+    repeats = 5
+    payload_bytes = payload_mb * 1024 * 1024  # Convert MB to bytes
+    
+    # Create a moderately sized DAG that will cause memory growth
+    dag, root, inputs = _create_synthetic_dag(50, payload_bytes)  # 50 nodes with large payloads
+    
+    # Use a very small budget that should still work
+    budget = 3  # Very constrained to demonstrate √space benefits
+    
+    # Baseline jobs (will likely exceed memory with large payloads)  
+    for repeat in range(repeats):
+        job = Job(
+            name=f"memory-stress-{payload_mb}mb/baseline/repeat_{repeat}",
+            mode="baseline",
+            budget_nodes=None,
+            dag=dag,
+            root=root,
+            inputs=inputs
+        )
+        jobs.append(job)
+    
+    # √N+fractal jobs with small budget (should succeed with bounded memory)
+    for repeat in range(repeats):
+        job = Job(
+            name=f"memory-stress-{payload_mb}mb/sqrt-{budget}/repeat_{repeat}",
+            mode="sqrt", 
+            budget_nodes=budget,
+            dag=dag,
+            root=root,
+            inputs=inputs
+        )
+        jobs.append(job)
+    
+    return jobs

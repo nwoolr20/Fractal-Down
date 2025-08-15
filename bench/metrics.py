@@ -105,7 +105,7 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
                 max_rss = max(max_rss, current_rss)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 break
-            time.sleep(0.02)  # 20ms sampling interval
+            time.sleep(0.005)  # 5ms sampling interval for better peak detection
     
     # Start sampling thread
     sampler_thread = threading.Thread(target=rss_sampler, daemon=True)
@@ -116,9 +116,20 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
     finally:
         stop_event.set()
         sampler_thread.join(timeout=1.0)  # Wait up to 1s for thread to finish
+        
+        # Also check ru_maxrss for better peak detection
+        try:
+            import resource
+            ru_maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            # On Linux, ru_maxrss is in KB, on macOS it's in bytes
+            ru_maxrss = ru_maxrss * 1024 if ru_maxrss < 1000000 else ru_maxrss
+            max_rss = max(max_rss, ru_maxrss)
+        except ImportError:
+            pass
+        
         result["peak_rss_bytes"] = max_rss
         result["delta_rss_bytes"] = max(0, max_rss - pre_rss)
-        result["metadata"]["method"] = "sampled"
+        result["metadata"]["method"] = "sampled+rusage"
 
 
 @contextmanager
@@ -177,7 +188,7 @@ def measure_vram_peak() -> Generator[Dict[str, Any], None, None]:
                     break
             except Exception:
                 break
-            time.sleep(0.05)  # 50ms sampling interval
+            time.sleep(0.01)  # 10ms sampling interval for better VRAM peak detection
     
     sampler_thread = threading.Thread(target=vram_sampler, daemon=True)
     sampler_thread.start()
