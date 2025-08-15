@@ -38,8 +38,19 @@ def generate_all_charts(data: Union[List[Dict[str, Any]], 'pd.DataFrame'],
         run_dir: Directory to save charts
     """
     if not HAS_MATPLOTLIB:
-        print("matplotlib not available - skipping chart generation")
-        return
+        print("matplotlib not available - generating simple text/HTML charts instead")
+        try:
+            from bench.simple_charts import generate_simple_charts
+            # Convert DataFrame to list of dicts if needed
+            if HAS_PANDAS and hasattr(data, 'to_dict'):
+                data_list = data.to_dict('records')
+            else:
+                data_list = data
+            generate_simple_charts(data_list, run_dir)
+            return
+        except ImportError:
+            print("Simple charts fallback not available - skipping chart generation")
+            return
     
     run_dir = Path(run_dir)
     
