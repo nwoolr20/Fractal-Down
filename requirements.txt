@@ -1,0 +1,7 @@
+# Base requirements for fractal-down
+# The core package has no required dependencies
+# Use optional requirements files for specific environments:
+# - requirements-test.txt for testing
+# - requirements-bench.txt for benchmarking  
+# - requirements-torch.txt for torch support
+# - requirements-dev.txt for development (includes all above)

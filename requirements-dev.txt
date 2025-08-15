@@ -1,0 +1,11 @@
+# Development requirements for fractal-down
+# Includes all optional dependencies for full development environment
+
+# Testing
+-r requirements-test.txt
+
+# Benchmarking  
+-r requirements-bench.txt
+
+# PyTorch support
+-r requirements-torch.txt

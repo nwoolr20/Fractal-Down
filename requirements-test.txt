@@ -1,0 +1,2 @@
+# Testing requirements for fractal-down
+pytest>=6.0
