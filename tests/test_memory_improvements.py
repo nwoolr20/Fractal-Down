@@ -33,12 +33,12 @@ def test_memory_tracking_shows_differences():
         with open(results_file, 'r') as f:
             lines = f.readlines()
         
-        # Check that some delta_rss_bytes values are > 0 (column 4, 0-indexed)
+        # Check that some delta_rss_bytes values are > 0 (column 5, 0-indexed)
         delta_rss_values = []
         for i, line in enumerate(lines[1:]):  # Skip header
             cols = line.strip().split(',')
-            if len(cols) > 3:
-                delta_rss = int(cols[3])
+            if len(cols) > 4:
+                delta_rss = int(cols[4])
                 delta_rss_values.append(delta_rss)
         
         # At least some runs should show non-zero memory delta 
@@ -88,8 +88,8 @@ def test_memory_stress_scenario():
         peak_rss_values = []
         for line in lines[1:]:  # Skip header
             cols = line.strip().split(',')
-            if len(cols) > 11:  # peak_rss_bytes is column 11
-                peak_rss = int(cols[11])
+            if len(cols) > 12:  # peak_rss_bytes is column 13 (0-indexed = 12)
+                peak_rss = int(cols[12])
                 peak_rss_values.append(peak_rss)
         
         if peak_rss_values:

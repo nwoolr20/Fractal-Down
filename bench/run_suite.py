@@ -288,11 +288,24 @@ def _run_single_job(job: Job, verify: bool = False, rss_cap_mb: int = 0) -> Dict
     result.update(vram_ctx) 
     result.update(energy_ctx)
     
+    # Add RSS cap information to results
+    result['rss_cap_mb'] = rss_cap_mb
+    
     # Check RSS cap if specified
     if rss_cap_mb > 0:
         rss_cap_bytes = rss_cap_mb * 1024 * 1024
-        if result.get('peak_rss_bytes', 0) > rss_cap_bytes:
+        rss_cap_exceeded = result.get('peak_rss_bytes', 0) > rss_cap_bytes
+        result['rss_cap_exceeded'] = rss_cap_exceeded
+        if rss_cap_exceeded:
             result['notes'] = f"CAP_EXCEEDED (peak_rss={result.get('peak_rss_bytes', 0)/1024/1024:.1f}MB > cap={rss_cap_mb}MB)"
+    else:
+        result['rss_cap_exceeded'] = False
+    
+    # Add cache state for cold vs warm labeling
+    if job.mode == "sqrt":
+        result['cache_state'] = 'warm' if result.get('from_cache', False) else 'cold'
+    else:
+        result['cache_state'] = 'baseline'
     
     return result
 
