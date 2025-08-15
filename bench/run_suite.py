@@ -60,6 +60,9 @@ def main(args: Optional[List[str]] = None) -> int:
     parser.add_argument('--verify', action='store_true',
                        help='Enable evaluator verification')
     
+    parser.add_argument('--payload-bytes', type=int, default=0,
+                       help='Size of payload per node in bytes (default: 0, creates large intermediates for memory pressure)')
+    
     parsed_args = parser.parse_args(args)
     
     # Create run directory
@@ -80,7 +83,7 @@ def main(args: Optional[List[str]] = None) -> int:
     jobs = []
     
     if 'tiny' in parsed_args.scenarios:
-        tiny_jobs = scenario_tiny()
+        tiny_jobs = scenario_tiny(parsed_args.payload_bytes)
         # Override repeats if specified
         if parsed_args.repeats != 5:  # 5 is default for tiny
             tiny_jobs = _override_repeats(tiny_jobs, parsed_args.repeats, 'tiny')
@@ -88,7 +91,7 @@ def main(args: Optional[List[str]] = None) -> int:
         print(f"Generated {len(tiny_jobs)} tiny scenario jobs")
     
     if 'synthetic' in parsed_args.scenarios:
-        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n)
+        synthetic_jobs = scenario_synthetic(parsed_args.synthetic_n, parsed_args.payload_bytes)
         # Override repeats if specified
         if parsed_args.repeats != 10:  # 10 is default for synthetic
             synthetic_jobs = _override_repeats(synthetic_jobs, parsed_args.repeats, 'synthetic')
@@ -186,7 +189,11 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
         'energy_uj': "NA",
         'correct': False,
         'from_cache': False,
-        'notes': ""
+        'notes': "",
+        # Plan characteristics (for sqrt mode)
+        'unique_nodes': None,
+        'order_len': None, 
+        'recompute_factor': None
     }
     
     # Run with nested context managers for metrics collection
@@ -203,8 +210,17 @@ def _run_single_job(job: Job, verify: bool = False) -> Dict[str, Any]:
                         
                     elif job.mode == "sqrt":
                         # √N+fractal: build plan and use evaluator
-                        sqrt_result, was_cached = _run_sqrt(job.dag, job.root, job.inputs, 
+                        sqrt_result, was_cached, plan = _run_sqrt(job.dag, job.root, job.inputs, 
                                                            job.budget_nodes, verify)
+                        
+                        # Extract plan characteristics
+                        unique_nodes = len(set(plan.order))
+                        order_len = len(plan.order)
+                        recompute_factor = order_len / unique_nodes if unique_nodes > 0 else 1.0
+                        
+                        result['unique_nodes'] = unique_nodes
+                        result['order_len'] = order_len
+                        result['recompute_factor'] = recompute_factor
                         
                         # Check correctness against baseline if possible
                         baseline_result = _run_baseline(job.dag, job.root, job.inputs)
@@ -299,7 +315,7 @@ def _run_sqrt(dag: DAG, root: int, inputs: Dict[int, Any],
     Run √N+fractal evaluation with plan building and caching.
     
     Returns:
-        Tuple of (EvalResult, was_cached)
+        Tuple of (EvalResult, was_cached, Plan)
     """
     # Compute priorities
     params = FractalParams()
@@ -316,7 +332,7 @@ def _run_sqrt(dag: DAG, root: int, inputs: Dict[int, Any],
     evaluator = Evaluator(dag, inputs)
     result = evaluator.run(plan, verify=verify)
     
-    return result, was_cached
+    return result, was_cached, plan
 
 
 def _extract_repeat_number(job_name: str) -> int:

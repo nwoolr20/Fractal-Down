@@ -49,9 +49,10 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
         proc: Optional psutil.Process instance. If None, uses current process.
         
     Yields:
-        Dictionary that will contain 'peak_rss_bytes' after context exit.
+        Dictionary that will contain 'peak_rss_bytes', 'pre_rss_bytes', 
+        and 'delta_rss_bytes' after context exit.
     """
-    result = {"peak_rss_bytes": 0, "metadata": {}}
+    result = {"peak_rss_bytes": 0, "pre_rss_bytes": 0, "delta_rss_bytes": 0, "metadata": {}}
     
     if not HAS_PSUTIL:
         # Fallback: single snapshot at start/end
@@ -63,8 +64,10 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
             if hasattr(resource, 'RUSAGE_SELF'):
                 # Convert to bytes (Linux uses KB)
                 start_rss = start_rss * 1024 if start_rss < 1000000 else start_rss
+            result["pre_rss_bytes"] = start_rss
         except ImportError:
             start_rss = 0
+            result["pre_rss_bytes"] = 0
         
         yield result
         
@@ -73,15 +76,25 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
             end_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             end_rss = end_rss * 1024 if end_rss < 1000000 else end_rss
             result["peak_rss_bytes"] = max(start_rss, end_rss)
+            result["delta_rss_bytes"] = max(0, result["peak_rss_bytes"] - result["pre_rss_bytes"])
         except ImportError:
             result["peak_rss_bytes"] = 0
+            result["delta_rss_bytes"] = 0
         return
     
     # Full tracking with psutil
     if proc is None:
         proc = psutil.Process()
     
-    max_rss = 0
+    # Get baseline RSS before execution
+    try:
+        pre_rss = proc.memory_info().rss
+        result["pre_rss_bytes"] = pre_rss
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pre_rss = 0
+        result["pre_rss_bytes"] = 0
+    
+    max_rss = pre_rss
     stop_event = threading.Event()
     
     def rss_sampler():
@@ -104,6 +117,7 @@ def track_peak_rss(proc: Optional['psutil.Process'] = None) -> Generator[Dict[st
         stop_event.set()
         sampler_thread.join(timeout=1.0)  # Wait up to 1s for thread to finish
         result["peak_rss_bytes"] = max_rss
+        result["delta_rss_bytes"] = max(0, max_rss - pre_rss)
         result["metadata"]["method"] = "sampled"
 
 

@@ -15,6 +15,104 @@ from fractal_down.dag import DAG
 from fractal_down.examples import make_tiny_dag
 
 
+def _add_payload_to_inputs(inputs: Dict[int, Any], payload_bytes: int) -> Dict[int, Any]:
+    """
+    Replace input values with larger data structures to create memory pressure.
+    
+    Args:
+        inputs: Original input dictionary 
+        payload_bytes: Size of payload per input in bytes
+        
+    Returns:
+        Modified inputs with payloads attached
+    """
+    if payload_bytes <= 0:
+        return inputs
+    
+    # Create a large bytes object as payload
+    # Use a simple pattern that compresses poorly to simulate real data
+    import numpy as np
+    try:
+        # Use numpy arrays if available for more realistic memory usage
+        # Each float64 is 8 bytes, so we need payload_bytes // 8 elements
+        array_size = max(1, payload_bytes // 8)
+        
+        new_inputs = {}
+        for node_id, orig_value in inputs.items():
+            # Create payload array with some variation to prevent compression
+            payload = np.random.rand(array_size).astype(np.float64)
+            # Create a PayloadedValue wrapper that behaves like the original value
+            new_inputs[node_id] = PayloadedValue(orig_value, payload)
+        return new_inputs
+        
+    except ImportError:
+        # Fallback to bytes if numpy not available
+        # Create payload with some variation
+        payload_template = bytes(range(256)) * (payload_bytes // 256 + 1)
+        payload = payload_template[:payload_bytes]
+        
+        new_inputs = {}
+        for node_id, orig_value in inputs.items():
+            new_inputs[node_id] = PayloadedValue(orig_value, payload)
+        return new_inputs
+
+
+class PayloadedValue:
+    """
+    A wrapper that behaves like a numeric value but carries a large payload.
+    
+    This allows existing operations to work transparently while creating memory pressure.
+    """
+    
+    def __init__(self, value, payload):
+        self.value = value
+        self.payload = payload
+    
+    def __add__(self, other):
+        other_val = other.value if isinstance(other, PayloadedValue) else other
+        result_val = self.value + other_val
+        # Create new payload for result
+        return PayloadedValue(result_val, self.payload)
+    
+    def __radd__(self, other):
+        return self.__add__(other)
+    
+    def __mul__(self, other):
+        other_val = other.value if isinstance(other, PayloadedValue) else other
+        result_val = self.value * other_val
+        return PayloadedValue(result_val, self.payload)
+    
+    def __rmul__(self, other):
+        return self.__mul__(other)
+    
+    def __sub__(self, other):
+        other_val = other.value if isinstance(other, PayloadedValue) else other
+        result_val = self.value - other_val
+        return PayloadedValue(result_val, self.payload)
+    
+    def __rsub__(self, other):
+        other_val = other if not isinstance(other, PayloadedValue) else other.value
+        result_val = other_val - self.value
+        return PayloadedValue(result_val, self.payload)
+    
+    def __truediv__(self, other):
+        other_val = other.value if isinstance(other, PayloadedValue) else other
+        result_val = self.value / other_val
+        return PayloadedValue(result_val, self.payload)
+    
+    def __float__(self):
+        return float(self.value)
+    
+    def __int__(self):
+        return int(self.value)
+    
+    def __str__(self):
+        return str(self.value)
+    
+    def __repr__(self):
+        return f"PayloadedValue({self.value}, payload_len={len(self.payload) if hasattr(self.payload, '__len__') else 'N/A'})"
+
+
 class Job:
     """A benchmark job specification."""
     
@@ -28,9 +126,12 @@ class Job:
         self.inputs = inputs
 
 
-def scenario_tiny() -> List[Job]:
+def scenario_tiny(payload_bytes: int = 0) -> List[Job]:
     """
     Generate tiny scenario jobs using make_tiny_dag().
+    
+    Args:
+        payload_bytes: Size of payload per node in bytes (0 = small numeric values)
     
     Returns:
         List of Job objects for baseline and √N+fractal modes
@@ -42,6 +143,10 @@ def scenario_tiny() -> List[Job]:
     
     # Get the tiny DAG
     dag, root, inputs = make_tiny_dag()
+    
+    # Modify inputs to include payload if requested
+    if payload_bytes > 0:
+        inputs = _add_payload_to_inputs(inputs, payload_bytes)
     
     # Baseline jobs (no budget limit, just topological evaluation)
     for repeat in range(repeats):
@@ -71,12 +176,13 @@ def scenario_tiny() -> List[Job]:
     return jobs
 
 
-def scenario_synthetic(n_nodes: int = 200) -> List[Job]:
+def scenario_synthetic(n_nodes: int = 200, payload_bytes: int = 0) -> List[Job]:
     """
     Generate synthetic scenario with ~n_nodes DAG.
     
     Args:
         n_nodes: Target number of nodes in the synthetic DAG
+        payload_bytes: Size of payload per node in bytes (0 = small numeric values)
         
     Returns:
         List of Job objects for baseline and √N+fractal modes
@@ -86,7 +192,7 @@ def scenario_synthetic(n_nodes: int = 200) -> List[Job]:
     repeats = 10
     
     # Create synthetic DAG
-    dag, root, inputs = _create_synthetic_dag(n_nodes)
+    dag, root, inputs = _create_synthetic_dag(n_nodes, payload_bytes)
     
     # Compute budgets: [ceil(sqrt(N))/2, ceil(sqrt(N)), 2*ceil(sqrt(N))]
     sqrt_n = math.ceil(math.sqrt(n_nodes))
@@ -124,7 +230,7 @@ def scenario_synthetic(n_nodes: int = 200) -> List[Job]:
     return jobs
 
 
-def _create_synthetic_dag(target_nodes: int, seed: int = 42) -> Tuple[DAG, int, Dict[int, Any]]:
+def _create_synthetic_dag(target_nodes: int, payload_bytes: int = 0, seed: int = 42) -> Tuple[DAG, int, Dict[int, Any]]:
     """
     Create a synthetic DAG with approximately target_nodes nodes.
     
@@ -134,6 +240,7 @@ def _create_synthetic_dag(target_nodes: int, seed: int = 42) -> Tuple[DAG, int, 
     
     Args:
         target_nodes: Target number of nodes
+        payload_bytes: Size of payload per input in bytes
         seed: Random seed for deterministic generation
         
     Returns:
@@ -160,6 +267,10 @@ def _create_synthetic_dag(target_nodes: int, seed: int = 42) -> Tuple[DAG, int, 
         leaf_id = dag.add_leaf(f"leaf_{i}", meta)
         leaf_ids.append(leaf_id)
         inputs[leaf_id] = random.uniform(-10.0, 10.0)
+    
+    # Add payload to inputs if requested
+    if payload_bytes > 0:
+        inputs = _add_payload_to_inputs(inputs, payload_bytes)
     
     # Define operations with their properties
     def double_op(x):
