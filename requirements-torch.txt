@@ -1,2 +1,3 @@
 # PyTorch support requirements for fractal-down
-torch
+# References pyproject.toml as single source of truth
+-e .[torch]

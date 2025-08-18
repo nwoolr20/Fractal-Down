@@ -45,17 +45,15 @@ def test_requirements_parseable():
             assert False, f"Exception parsing {req_file}: {e}"
 
 def test_dev_requirements_includes_all():
-    """Test that dev requirements includes all other requirement files."""
+    """Test that dev requirements includes all optional dependencies via pyproject.toml."""
     project_root = Path(__file__).parent.parent
     dev_req_path = project_root / "requirements-dev.txt"
     
     with open(dev_req_path) as f:
         dev_content = f.read()
     
-    # Should include references to other requirement files
-    assert "-r requirements-test.txt" in dev_content
-    assert "-r requirements-bench.txt" in dev_content  
-    assert "-r requirements-torch.txt" in dev_content
+    # Should include reference to pyproject.toml with all extras
+    assert "-e .[test,bench,torch]" in dev_content
 
 if __name__ == "__main__":
     test_requirements_files_exist()
