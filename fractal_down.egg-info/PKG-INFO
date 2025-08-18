@@ -102,22 +102,27 @@ pip install fractal-down[bench]    # Benchmarking dependencies
 
 #### For Development
 
-Clone the repository and use requirements files:
+Clone the repository and choose your installation method:
 
 ```bash
 git clone https://github.com/nwoolr20/FD.git
 cd FD
 
-# Install core package in editable mode
+# Option 1: Install with all dependencies (recommended)
+pip install -r requirements.txt
+
+# Option 2: Install core package and add optional dependencies as needed
 pip install -e .
+pip install -e .[test]       # Testing dependencies
+pip install -e .[bench]      # Benchmarking dependencies  
+pip install -e .[torch]      # PyTorch support
+pip install -e .[test,bench,torch]  # All optional dependencies
 
-# Install development dependencies (includes test, bench, and torch)
-pip install -r requirements-dev.txt
-
-# Or install specific environments:
-pip install -r requirements-test.txt   # Testing only
-pip install -r requirements-bench.txt  # Benchmarking only  
-pip install -r requirements-torch.txt  # PyTorch support only
+# Legacy approach (still works)
+pip install -r requirements-dev.txt     # All dependencies
+pip install -r requirements-test.txt    # Testing only
+pip install -r requirements-bench.txt   # Benchmarking only  
+pip install -r requirements-torch.txt   # PyTorch support only
 ```
 
 ### Basic Usage
@@ -327,13 +332,10 @@ MIT License - see LICENSE file for details.
 Contributions welcome! Please ensure all tests pass:
 
 ```bash
-# Install package in development mode
-pip install -e .
+# Install package with all dependencies for development
+pip install -r requirements.txt
 
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Or install dependencies using pyproject.toml (alternative method)
+# Or install dependencies using pyproject.toml (recommended)
 pip install -e .[test,bench,torch]
 
 # Run tests
