@@ -1,11 +1,4 @@
 # Development requirements for fractal-down
-# Includes all optional dependencies for full development environment
-
-# Testing
--r requirements-test.txt
-
-# Benchmarking  
--r requirements-bench.txt
-
-# PyTorch support
--r requirements-torch.txt
+# Consolidated entry point that includes all optional dependencies
+# References pyproject.toml as single source of truth
+-e .[test,bench,torch]

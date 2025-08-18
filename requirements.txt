@@ -1,7 +1,6 @@
-# Base requirements for fractal-down
-# The core package has no required dependencies
-# Use optional requirements files for specific environments:
-# - requirements-test.txt for testing
-# - requirements-bench.txt for benchmarking  
-# - requirements-torch.txt for torch support
-# - requirements-dev.txt for development (includes all above)
+# Single requirements file for fractal-down development
+# This is the consolidated entry point that includes all optional dependencies
+# Uses pyproject.toml as the single source of truth
+
+# Install package in editable mode with all optional dependencies
+-e .[test,bench,torch]
