@@ -295,7 +295,6 @@ def cmd_clear_cache(days: Optional[int], count: Optional[int]) -> int:
 def cmd_bench(args) -> int:
     """Run benchmark and verification suite."""
     try:
-        import sys
         import os
         
         # Add the parent directory to Python path to import bench

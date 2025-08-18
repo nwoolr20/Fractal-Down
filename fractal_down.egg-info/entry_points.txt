@@ -1,2 +1,0 @@
-[console_scripts]
-fd = fractal_down.cli:main
