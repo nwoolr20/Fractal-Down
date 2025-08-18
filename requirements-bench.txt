@@ -1,3 +1,0 @@
-# Benchmarking requirements for fractal-down
-# References pyproject.toml as single source of truth
--e .[bench]
