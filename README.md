@@ -85,12 +85,6 @@ pip install -e .[test]       # Testing dependencies
 pip install -e .[bench]      # Benchmarking dependencies  
 pip install -e .[torch]      # PyTorch support
 pip install -e .[test,bench,torch]  # All optional dependencies
-
-# Legacy approach (still works)
-pip install -r requirements-dev.txt     # All dependencies
-pip install -r requirements-test.txt    # Testing only
-pip install -r requirements-bench.txt   # Benchmarking only  
-pip install -r requirements-torch.txt   # PyTorch support only
 ```
 
 ### Basic Usage

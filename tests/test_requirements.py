@@ -7,56 +7,48 @@ import sys
 from pathlib import Path
 
 def test_requirements_files_exist():
-    """Test that all expected requirements files exist."""
+    """Test that the main requirements file exists."""
     project_root = Path(__file__).parent.parent
     
-    required_files = [
-        "requirements.txt",
-        "requirements-test.txt", 
-        "requirements-bench.txt",
-        "requirements-torch.txt",
-        "requirements-dev.txt"
-    ]
-    
-    for req_file in required_files:
-        file_path = project_root / req_file
-        assert file_path.exists(), f"Requirements file {req_file} does not exist"
+    # Only check for the main requirements.txt file
+    req_file = "requirements.txt"
+    file_path = project_root / req_file
+    assert file_path.exists(), f"Requirements file {req_file} does not exist"
 
 def test_requirements_parseable():
-    """Test that requirements files can be parsed by pip."""
+    """Test that the main requirements file can be parsed by pip."""
     project_root = Path(__file__).parent.parent
     
-    # Test that each requirements file can be parsed without errors
-    for req_file in ["requirements-test.txt", "requirements-bench.txt", "requirements-torch.txt"]:
-        file_path = project_root / req_file
+    # Test that requirements.txt can be parsed without errors
+    file_path = project_root / "requirements.txt"
+    
+    # Use pip-tools to dry-run parse the requirements
+    try:
+        result = subprocess.run([
+            sys.executable, "-c", 
+            f"from pip._internal.req import parse_requirements; "
+            f"from pip._internal.network.session import PipSession; "
+            f"list(parse_requirements('{file_path}', session=PipSession()))"
+        ], capture_output=True, text=True, cwd=project_root)
         
-        # Use pip-tools to dry-run parse the requirements
-        try:
-            result = subprocess.run([
-                sys.executable, "-c", 
-                f"from pip._internal.req import parse_requirements; "
-                f"from pip._internal.network.session import PipSession; "
-                f"list(parse_requirements('{file_path}', session=PipSession()))"
-            ], capture_output=True, text=True, cwd=project_root)
-            
-            assert result.returncode == 0, f"Failed to parse {req_file}: {result.stderr}"
-            
-        except Exception as e:
-            assert False, f"Exception parsing {req_file}: {e}"
+        assert result.returncode == 0, f"Failed to parse requirements.txt: {result.stderr}"
+        
+    except Exception as e:
+        assert False, f"Exception parsing requirements.txt: {e}"
 
-def test_dev_requirements_includes_all():
-    """Test that dev requirements includes all optional dependencies via pyproject.toml."""
+def test_main_requirements_includes_all():
+    """Test that the main requirements file includes all optional dependencies via pyproject.toml."""
     project_root = Path(__file__).parent.parent
-    dev_req_path = project_root / "requirements-dev.txt"
+    req_path = project_root / "requirements.txt"
     
-    with open(dev_req_path) as f:
-        dev_content = f.read()
+    with open(req_path) as f:
+        content = f.read()
     
     # Should include reference to pyproject.toml with all extras
-    assert "-e .[test,bench,torch]" in dev_content
+    assert "-e .[test,bench,torch]" in content
 
 if __name__ == "__main__":
     test_requirements_files_exist()
     test_requirements_parseable() 
-    test_dev_requirements_includes_all()
+    test_main_requirements_includes_all()
     print("All requirements file tests passed! ✅")

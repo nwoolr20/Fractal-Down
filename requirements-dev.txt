@@ -1,4 +1,0 @@
-# Development requirements for fractal-down
-# Consolidated entry point that includes all optional dependencies
-# References pyproject.toml as single source of truth
--e .[test,bench,torch]
