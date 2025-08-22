@@ -14,8 +14,8 @@
 ## Table of Contents
 
 - [Why Fractal-Down](#why-fractal-down)
-- [What it buys me](#what-it-buys-me)
-- [Where I use it (real-world)](#where-i-use-it-real-world)
+- [What it buys](#what-it-buys-me)
+- [Where to use it (real-world)](#where-i-use-it-real-world)
 - [Two quick scenarios](#two-quick-scenarios)
 - [Who benefits](#who-benefits)
 - [Repository Structure](#repository-structure)
@@ -35,16 +35,16 @@
 
 ## Why Fractal-Down
 
-Fractal-Down lets me run big, dependency-heavy graphs on small machines—fast enough, memory-safe, and reproducible—by spending compute only where the signal is. I bound peak scratch to ≈√N nodes, schedule high-value paths first, and cache the execution plan (not activations) for deterministic replay later.
+Fractal-Down lets you run big, dependency-heavy graphs on small machines—fast enough, memory-safe, and reproducible—by spending compute only where the signal is. Bound peak scratch to ≈√N nodes, schedule high-value paths first, and cache the execution plan (not activations) for deterministic replay later.
 
-## What it buys me
+## What it buys
 
 - **Bounded RAM by design**. Peak scratch scales ≈ √N instead of N, so 8–16 GB laptops/phones can handle graphs that normally need workstations.
-- **Anytime results**. I can stop early and still have a coherent answer; more time just refines "interesting" parts.
-- **Deterministic replay**. Binary plans cache the execution recipe; I can reproduce the exact result later/on another box.
+- **Anytime results**. You can stop early and still have a coherent answer; more time just refines "interesting" parts.
+- **Deterministic replay**. Binary plans cache the execution recipe; You can reproduce the exact result later/on another box.
 - **Lower energy & cost**. Recompute beats hoarding memory—great for edge, mobile, and cost-sensitive servers.
 
-## Where I use it (real-world)
+## Where to use it (real-world)
 
 - **On-device AI / edge inference**: retrieval, ranking, feature pipelines under hard memory ceilings.
 - **Search/RAG pipelines**: pre-plan a query DAG; descend only into shards with high residual/novelty; cache the plan for popular queries.
