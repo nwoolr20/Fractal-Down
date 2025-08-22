@@ -146,7 +146,7 @@ def make_wide_dag() -> Tuple[DAG, int, Dict[int, Any]]:
     for i in range(0, len(input_ids), 2):
         if i + 1 < len(input_ids):
             op_id = dag.add_op(
-                f"pair_{i//2}",
+                f"pair_{i // 2}",
                 operator.add,
                 [input_ids[i], input_ids[i + 1]],
                 {"e": 0.3, "H": 0.4, "w": 0.5},
