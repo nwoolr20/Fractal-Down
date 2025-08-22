@@ -5,23 +5,9 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-```
-    ▄▄▄▄▄▄▄▄▄▄▄    ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄ 
-   ▐░░░░░░░░░░░▌  ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌
-   ▐░█▀▀▀▀▀▀▀█░▌  ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌
-   ▐░▌       ▐░▌  ▐░▌       ▐░▌▐░▌       ▐░▌
-   ▐░█▄▄▄▄▄▄▄█░▌  ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌
-   ▐░░░░░░░░░░░▌  ▐░░░░░░░░░░▌ ▐░▌       ▐░▌
-   ▐░█▀▀▀▀▀▀▀█░▌  ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌
-   ▐░▌       ▐░▌  ▐░▌       ▐░▌▐░▌       ▐░▌
-   ▐░▌       ▐░▌  ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄█░▌
-   ▐░▌       ▐░▌  ▐░▌       ▐░▌▐░░░░░░░░░░░▌
-    ▀         ▀    ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀ 
-                              
-    ╔═══════════════════════════════════════════════════════════╗
-    ║   F R A C T A L - D O W N   │   √N Memory   │   Scalable  ║
-    ╚═══════════════════════════════════════════════════════════╝
-```
+<p align="center">
+  <img alt="Fractal-Down Logo" src="assets/fractal-down-logo.png" width="400">
+</p>
 
 **Production-grade DAG evaluation with √N memory and fractal priority scheduling.**
 
