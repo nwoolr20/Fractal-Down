@@ -6,7 +6,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 <p align="center">
-  <img alt="Fractal-Down Banner" src="https://github.com/user-attachments/assets/c28e717d-fffd-49bd-9e82-e69ed5f44a08" width="600">
+  <img alt="Fractal-Down Banner" src="https://github.com/user-attachments/assets/c4f972a8-af5d-49eb-bc61-0310f3ebaaca" width="600">
 </p>
 
 **Production-grade DAG evaluation with √N memory and fractal priority scheduling.**
