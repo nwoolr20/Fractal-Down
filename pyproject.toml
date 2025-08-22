@@ -9,7 +9,7 @@ description = "Production-grade DAG evaluation with √N memory and fractal prio
 readme = "README.md"
 license = {text = "Apache-2.0 OR FRACTAL-DOWN"}
 authors = [
-    {name = "ALL4XIOM"},
+    {name = "Nicholas Woolridge & NOCTRL™ (Nô)"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
