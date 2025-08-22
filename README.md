@@ -1,12 +1,12 @@
 # Fractal-Down
 
-[![CI](https://github.com/nwoolr20/Fractal-Down/workflows/CI/badge.svg)](https://github.com/nwoolr20/Fractal-Down/actions)
+[![CI](https://github.com/nwoolr20/Fractal-Down/actions/workflows/ci.yml/badge.svg)](https://github.com/nwoolr20/Fractal-Down/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 <p align="center">
-  <img alt="Fractal-Down Logo" src="assets/fractal-down-logo.png" width="400">
+  <img alt="Fractal-Down Banner" src="assets/fractal-down-banner.svg" width="600">
 </p>
 
 **Production-grade DAG evaluation with √N memory and fractal priority scheduling.**
