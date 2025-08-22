@@ -37,8 +37,10 @@ bench = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nwoolr20/FD"
-Repository = "https://github.com/nwoolr20/FD"
+Homepage = "https://github.com/nwoolr20/Fractal-Down"
+Repository = "https://github.com/nwoolr20/Fractal-Down"
+Issues = "https://github.com/nwoolr20/Fractal-Down/issues"
+Documentation = "https://github.com/nwoolr20/Fractal-Down#readme"
 
 [project.scripts]
 fd = "fractal_down.cli:main"
