@@ -1,7 +1,7 @@
 # Fractal-Down
 
 [![CI](https://github.com/nwoolr20/Fractal-Down/actions/workflows/ci.yml/badge.svg)](https://github.com/nwoolr20/Fractal-Down/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Dual](https://img.shields.io/badge/License-Apache%202.0%20OR%20Fractal--Down-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -434,7 +434,12 @@ Results are saved to `artifacts/` with system information, detailed metrics, and
 
 ## License
 
-MIT License - see LICENSE file for details.
+This project is dual-licensed. You may choose either:
+
+- **Apache License 2.0** - see LICENSE-APACHE file for details
+- **Fractal-Down License (2025)** - see LICENSE-FRACTAL-DOWN file for details
+
+The full dual license text is available in the LICENSE file.
 
 ## Contributing
 
