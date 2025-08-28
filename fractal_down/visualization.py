@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from .features import VISUALIZATION_ENABLED, require_feature
+from . import features
 
 
 def render_dag(name: str) -> str:
     """Mock rendering of a DAG.
 
-    Raises :class:`ImportError` if visualization is not enabled.
+    Raises :class:`FeatureNotEnabledError` if visualization is not enabled.
     """
-    require_feature("Visualization", VISUALIZATION_ENABLED)
+    features.require_feature("Visualization", features.VISUALIZATION_ENABLED)
     return f"rendered visualization for {name}"

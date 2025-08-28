@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import os
 
+
+class FeatureNotEnabledError(Exception):
+    """Raised when an enterprise feature is used but not enabled."""
+    pass
+
 _GPU_ENV = "FRACTAL_DOWN_GPU"
 _DISTRIBUTED_ENV = "FRACTAL_DOWN_DISTRIBUTED"
 _VIZ_ENV = "FRACTAL_DOWN_VIZ"
@@ -46,7 +51,7 @@ def enable_visualization() -> None:
 
 
 def require_feature(name: str, enabled: bool) -> None:
-    """Raise :class:`ImportError` if ``enabled`` is ``False``.
+    """Raise :class:`FeatureNotEnabledError` if ``enabled`` is ``False``.
 
     Parameters
     ----------
@@ -56,6 +61,6 @@ def require_feature(name: str, enabled: bool) -> None:
         Boolean flag indicating whether the feature is active.
     """
     if not enabled:
-        raise ImportError(
+        raise FeatureNotEnabledError(
             f"{name} requires the enterprise edition. Please upgrade to access this feature."
         )
