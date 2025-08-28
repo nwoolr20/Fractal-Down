@@ -440,6 +440,16 @@ Results are saved to `artifacts/` with system information, detailed metrics, and
 | Professional | $499/month | Standard support, email & Slack, early feature access |
 | Enterprise | Custom | Premium support, integration consulting, training workshops |
 
+## Purchase
+
+To purchase a commercial license:
+
+1. Select a tier from the [Pricing](#pricing) table.
+2. Email [sales@fractal-down.io](mailto:sales@fractal-down.io) with your selected plan and expected usage.
+3. Our team will provide an invoice and deliver a license key upon payment.
+
+For legal questions or contract requests, contact [legal@fractal-down.io](mailto:legal@fractal-down.io).
+
 ## Contact
 
 For inquiries or to request a quote, use the contact form below:

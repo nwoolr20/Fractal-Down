@@ -16,6 +16,7 @@ from fractal_down.fractal import compute_node_priority, FractalParams
 from fractal_down.binary_plan import save_plan, load_plan
 from fractal_down.cache import get_cache_dir, get_or_build_plan
 from fractal_down.examples import make_tiny_dag, demo_run
+from fractal_down.license_key import generate_license, verify_license
 
 
 def main():
@@ -65,6 +66,16 @@ def main():
     clear_parser = subparsers.add_parser("clear-cache", help="Clear cached plans")
     clear_parser.add_argument("--days", type=int, help="Remove plans older than N days")
     clear_parser.add_argument("--count", type=int, help="Keep only N newest plans")
+
+    # license command
+    lic_parser = subparsers.add_parser("license", help="Manage license keys")
+    lic_sub = lic_parser.add_subparsers(dest="license_cmd")
+
+    lic_issue = lic_sub.add_parser("issue", help="Generate a license key")
+    lic_issue.add_argument("--contract", required=True, help="Contract identifier")
+
+    lic_check = lic_sub.add_parser("check", help="Verify a license key")
+    lic_check.add_argument("key", help="License key to check")
 
     # bench command
     bench_parser = subparsers.add_parser(
@@ -149,6 +160,8 @@ def main():
             return cmd_inspect_plan(args.path)
         elif args.command == "clear-cache":
             return cmd_clear_cache(args.days, args.count)
+        elif args.command == "license":
+            return cmd_license(args)
         elif args.command == "bench":
             return cmd_bench(args)
         else:
@@ -333,6 +346,24 @@ def cmd_clear_cache(days: Optional[int], count: Optional[int]) -> int:
     print(f"{remaining} files remaining in cache")
 
     return 0
+
+
+def cmd_license(args) -> int:
+    """Issue or verify license keys."""
+    if args.license_cmd == "issue":
+        record = generate_license(args.contract)
+        print(f"Issued license key: {record.key}")
+        return 0
+    elif args.license_cmd == "check":
+        if verify_license(args.key):
+            print("License key valid")
+            return 0
+        else:
+            print("License key invalid")
+            return 1
+    else:
+        print("No license action specified")
+        return 1
 
 
 def cmd_bench(args) -> int:

@@ -16,3 +16,9 @@
 - **Includes:** Dedicated account manager and guaranteed SLA adherence
 
 *All tiers include access to documentation and product updates.*
+
+## Purchasing & Legal
+
+To purchase a support agreement or commercial license, email [sales@fractal-down.io](mailto:sales@fractal-down.io) with your desired tier.
+
+For legal inquiries or contract review, contact [legal@fractal-down.io](mailto:legal@fractal-down.io).
