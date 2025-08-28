@@ -3,4 +3,4 @@
 # Uses pyproject.toml as the single source of truth
 
 # Install package in editable mode with all optional dependencies
--e .[test,bench,torch]
+-e .[test,bench,torch,api]

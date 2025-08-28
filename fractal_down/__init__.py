@@ -12,6 +12,7 @@ from fractal_down.treelift import Plan, build_plan
 from fractal_down.evaluator import Evaluator, EvalResult
 from fractal_down.binary_plan import save_plan, load_plan
 from fractal_down.cache import get_or_build_plan
+from fractal_down.api import app as api_app, set_billing_hook
 from fractal_down.hashing import get_default_provider
 from fractal_down.license_key import generate_license, verify_license, LicenseRecord
 
@@ -28,6 +29,8 @@ __all__ = [
     "save_plan",
     "load_plan",
     "get_or_build_plan",
+    "api_app",
+    "set_billing_hook",
     "get_default_provider",
     "generate_license",
     "verify_license",

@@ -8,7 +8,7 @@ and automatic cleanup of old entries.
 import os
 import time
 from pathlib import Path
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 from fractal_down.dag import DAG
 from fractal_down.fractal import FractalParams
@@ -17,14 +17,15 @@ from fractal_down.binary_plan import save_plan, load_plan
 from fractal_down.hashing import get_default_provider
 
 
-def get_cache_dir() -> Path:
-    """Get the plan cache directory, creating if necessary."""
+def get_cache_dir(tenant_id: str = "default") -> Path:
+    """Get the plan cache directory for a tenant, creating if necessary."""
     cache_dir_str = os.environ.get("FRACTAL_DOWN_PLANS_DIR")
     if cache_dir_str:
-        cache_dir = Path(cache_dir_str)
+        root_dir = Path(cache_dir_str)
     else:
-        cache_dir = Path.home() / ".fractal_down" / "plans"
+        root_dir = Path.home() / ".fractal_down" / "plans"
 
+    cache_dir = root_dir / tenant_id
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
 
@@ -40,6 +41,9 @@ def get_or_build_plan(
     budget_nodes: int,
     build_fn: Callable[[], Plan],
     params: Optional[FractalParams] = None,
+    *,
+    tenant_id: str = "default",
+    billing_hook: Optional[Callable[[str, str], None]] = None,
 ) -> Tuple[Plan, str, bool]:
     """
     Get cached plan or build and cache a new one.
@@ -61,13 +65,15 @@ def get_or_build_plan(
     fingerprint = _generate_fingerprint(dag, root, budget_nodes, params)
 
     # Get cache directory and file path
-    cache_dir = get_cache_dir()
+    cache_dir = get_cache_dir(tenant_id)
     cache_file = cache_dir / f"{fingerprint}.fplan"
 
     # Try to load from cache
     if cache_file.exists():
         try:
             plan = load_plan(str(cache_file))
+            if billing_hook:
+                billing_hook(tenant_id, "hit")
             return plan, str(cache_file), True
         except (ValueError, IOError):
             # Cache file corrupted or invalid - remove it
@@ -87,7 +93,10 @@ def get_or_build_plan(
         pass
 
     # Clean up old cache entries
-    _cleanup_cache()
+    _cleanup_cache(cache_dir)
+
+    if billing_hook:
+        billing_hook(tenant_id, "miss")
 
     return plan, str(cache_file), False
 
@@ -170,9 +179,8 @@ def _canonicalize_dag(dag: DAG, root: int) -> str:
     return "|".join(node_strs)
 
 
-def _cleanup_cache():
+def _cleanup_cache(cache_dir: Path):
     """Clean up old cache entries, keeping only the newest MAX_KEEP files."""
-    cache_dir = get_cache_dir()
     max_keep = get_max_keep()
 
     try:
