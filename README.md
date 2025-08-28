@@ -432,6 +432,27 @@ The benchmark suite includes:
 
 Results are saved to `artifacts/` with system information, detailed metrics, and simple charts.
 
+## Pricing
+
+| Tier | Price | Features |
+|------|-------|----------|
+| Community | Free | Open-source usage, community support |
+| Professional | $499/month | Standard support, email & Slack, early feature access |
+| Enterprise | Custom | Premium support, integration consulting, training workshops |
+
+## Contact
+
+For inquiries or to request a quote, use the contact form below:
+
+<form action="https://example.com/contact" method="POST">
+  <input type="text" name="name" placeholder="Your Name" required>
+  <input type="email" name="email" placeholder="Your Email" required>
+  <textarea name="message" placeholder="How can we help?" required></textarea>
+  <button type="submit">Send</button>
+</form>
+
+You can also reach us at [support@fractal-down.io](mailto:support@fractal-down.io).
+
 ## License
 
 This project is dual-licensed. You may choose either:
