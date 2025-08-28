@@ -1,0 +1,3 @@
+# Alias file for mixed reality tests
+from .test_transportation import test_spatial_anchoring_dag as test_spatial_anchoring_dag
+from .test_transportation import test_mixed_reality_demo as test_mixed_reality_demo
