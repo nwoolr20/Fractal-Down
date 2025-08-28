@@ -6,7 +6,7 @@ and constraint propagation to ensure parents have higher priority than children.
 """
 
 from dataclasses import dataclass, asdict
-from typing import Dict, Mapping, Optional
+from typing import Dict, Mapping, Optional, Any
 from fractal_down.dag import DAG
 import math
 
@@ -24,7 +24,7 @@ class FractalParams:
     lambda_: float = 0.7  # geometric schedule param
     p: Optional[float] = None  # if set, tau = tau0 / (s+1)^p else tau0 * lambda_^s
 
-    def asdict(self) -> Dict[str, any]:
+    def asdict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return asdict(self)
 

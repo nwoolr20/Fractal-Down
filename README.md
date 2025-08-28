@@ -14,8 +14,8 @@
 ## Table of Contents
 
 - [Why Fractal-Down](#why-fractal-down)
-- [What it buys](#what-it-buys-me)
-- [Where to use it (real-world)](#where-i-use-it-real-world)
+- [What it buys](#what-it-buys)
+- [Where to use it (real-world)](#where-to-use-it-real-world)
 - [Two quick scenarios](#two-quick-scenarios)
 - [Who benefits](#who-benefits)
 - [Repository Structure](#repository-structure)
@@ -28,8 +28,11 @@
 - [API Reference](#api-reference)
 - [Advanced Features](#advanced-features)
 - [Configuration](#configuration)
-- [Benchmarks & Performance](#benchmarks--performance)
 - [Related Work](#related-work)
+- [Benchmarks & Performance](#benchmarks--performance)
+- [Pricing](#pricing)
+- [Purchase](#purchase)
+- [Contact](#contact)
 - [License](#license)
 - [Contributing](#contributing)
 
