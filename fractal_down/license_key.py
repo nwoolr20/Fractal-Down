@@ -80,7 +80,7 @@ def verify_license(key: str) -> bool:
 
 def license_has_feature(key: str, feature: str) -> bool:
     """Return ``True`` if ``key`` is valid and ``feature`` is enabled."""
-    for rec in load_licenses():
-        if rec.get("key") == key:
-            return feature in rec.get("features", [])
+    rec = next((rec for rec in load_licenses() if rec.get("key") == key), None)
+    if rec is not None:
+        return feature in rec.get("features", [])
     return False

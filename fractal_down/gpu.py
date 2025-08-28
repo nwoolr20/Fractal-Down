@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from .features import GPU_ENABLED, require_feature
+from . import features
 
 
 def accelerate(data: str) -> str:
     """Mock acceleration using GPU kernels.
 
-    Raises :class:`ImportError` if GPU support is not enabled.
+    Raises :class:`FeatureNotEnabledError` if GPU support is not enabled.
     """
-    require_feature("GPU kernels", GPU_ENABLED)
+    features.require_feature("GPU kernels", features.GPU_ENABLED)
     return f"accelerated {data} with GPU kernels"

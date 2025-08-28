@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from .features import DISTRIBUTED_PLANNER_ENABLED, require_feature
+from . import features
 
 
 def plan_dag(nodes: int) -> str:
     """Mock distributed planning.
 
-    Raises :class:`ImportError` if the feature is not enabled.
+    Raises :class:`FeatureNotEnabledError` if the feature is not enabled.
     """
-    require_feature("Distributed planner", DISTRIBUTED_PLANNER_ENABLED)
+    features.require_feature("Distributed planner", features.DISTRIBUTED_PLANNER_ENABLED)
     return f"planned {nodes} nodes across cluster"

@@ -27,6 +27,7 @@ from fractal_down.features import (
     enable_distributed_planner,
     enable_visualization,
     require_feature,
+    FeatureNotEnabledError,
 )
 
 __all__ = [
@@ -54,4 +55,5 @@ __all__ = [
     "enable_distributed_planner",
     "enable_visualization",
     "require_feature",
+    "FeatureNotEnabledError",
 ]
