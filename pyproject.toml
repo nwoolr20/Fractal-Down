@@ -27,14 +27,15 @@ dependencies = []
 
 [project.optional-dependencies]
 torch = ["torch"]
-test = ["pytest>=6.0"]
+test = ["pytest>=6.0", "fastapi>=0.110", "httpx>=0.24"]
 bench = [
-    "psutil>=5.9", 
-    "matplotlib>=3.7", 
-    "pandas>=2.0; python_version >= '3.10'", 
-    "pynvml>=11.5; platform_system=='Linux' or platform_system=='Windows'", 
+    "psutil>=5.9",
+    "matplotlib>=3.7",
+    "pandas>=2.0; python_version >= '3.10'",
+    "pynvml>=11.5; platform_system=='Linux' or platform_system=='Windows'",
     "pyRAPL>=0.3; platform_system=='Linux'"
 ]
+api = ["fastapi>=0.110", "uvicorn>=0.23"]
 
 [project.urls]
 Homepage = "https://github.com/nwoolr20/Fractal-Down"

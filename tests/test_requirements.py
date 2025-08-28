@@ -56,7 +56,7 @@ def test_main_requirements_includes_all():
         content = f.read()
 
     # Should include reference to pyproject.toml with all extras
-    assert "-e .[test,bench,torch]" in content
+    assert "-e .[test,bench,torch,api]" in content
 
 
 if __name__ == "__main__":
