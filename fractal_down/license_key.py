@@ -13,7 +13,7 @@ import os
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 # Resolve license file path, allowing override through environment variable.
@@ -27,6 +27,7 @@ class LicenseRecord:
 
     key: str
     contract: str
+    features: Optional[List[str]] = None
 
 
 def _ensure_storage() -> None:
@@ -49,19 +50,37 @@ def save_licenses(records: List[dict]) -> None:
         json.dump(records, fh, indent=2)
 
 
-def generate_license(contract: str) -> LicenseRecord:
+def generate_license(contract: str, features: Optional[List[str]] = None) -> LicenseRecord:
     """Generate and store a new license key for ``contract``.
 
-    Returns the generated :class:`LicenseRecord`.
+    Parameters
+    ----------
+    contract:
+        Identifier for the customer contract.
+    features:
+        Optional list of enabled feature flags.
+
+    Returns
+    -------
+    LicenseRecord
+        The generated record containing the new license key.
     """
     records = load_licenses()
     key = secrets.token_hex(16)
-    record = {"key": key, "contract": contract}
+    record = {"key": key, "contract": contract, "features": features or []}
     records.append(record)
     save_licenses(records)
-    return LicenseRecord(key=key, contract=contract)
+    return LicenseRecord(key=key, contract=contract, features=features or [])
 
 
 def verify_license(key: str) -> bool:
     """Check whether ``key`` exists in stored licenses."""
     return any(rec.get("key") == key for rec in load_licenses())
+
+
+def license_has_feature(key: str, feature: str) -> bool:
+    """Return ``True`` if ``key`` is valid and ``feature`` is enabled."""
+    for rec in load_licenses():
+        if rec.get("key") == key:
+            return feature in rec.get("features", [])
+    return False

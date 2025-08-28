@@ -13,7 +13,21 @@ from fractal_down.evaluator import Evaluator, EvalResult
 from fractal_down.binary_plan import save_plan, load_plan
 from fractal_down.cache import get_or_build_plan
 from fractal_down.hashing import get_default_provider
-from fractal_down.license_key import generate_license, verify_license, LicenseRecord
+from fractal_down.license_key import (
+    generate_license,
+    verify_license,
+    license_has_feature,
+    LicenseRecord,
+)
+from fractal_down.features import (
+    GPU_ENABLED,
+    DISTRIBUTED_PLANNER_ENABLED,
+    VISUALIZATION_ENABLED,
+    enable_gpu,
+    enable_distributed_planner,
+    enable_visualization,
+    require_feature,
+)
 
 __all__ = [
     "__version__",
@@ -31,5 +45,13 @@ __all__ = [
     "get_default_provider",
     "generate_license",
     "verify_license",
+    "license_has_feature",
     "LicenseRecord",
+    "GPU_ENABLED",
+    "DISTRIBUTED_PLANNER_ENABLED",
+    "VISUALIZATION_ENABLED",
+    "enable_gpu",
+    "enable_distributed_planner",
+    "enable_visualization",
+    "require_feature",
 ]
