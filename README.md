@@ -434,8 +434,11 @@ Results are saved to `artifacts/` with system information, detailed metrics, and
 
 ## Pricing
 
+Fractal-Down is launching a limited beta with pay-as-you-go pricing for early adopters.
+
 | Tier | Price | Features |
 |------|-------|----------|
+| Beta | Pay-as-you-go | Limited access, metered billing per plan build/run |
 | Community | Free | Open-source usage, community support |
 | Professional | $499/month | Standard support, email & Slack, early feature access |
 | Enterprise | Custom | Premium support, integration consulting, training workshops |
