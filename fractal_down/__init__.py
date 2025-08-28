@@ -12,9 +12,16 @@ from fractal_down.treelift import Plan, build_plan
 from fractal_down.evaluator import Evaluator, EvalResult
 from fractal_down.binary_plan import save_plan, load_plan
 from fractal_down.cache import get_or_build_plan
-from fractal_down.api import app as api_app, set_billing_hook
 from fractal_down.hashing import get_default_provider
 from fractal_down.license_key import generate_license, verify_license, LicenseRecord
+
+try:  # Optional API dependencies
+    from .api import app as api_app, set_billing_hook  # type: ignore
+except Exception:  # pragma: no cover - handled when API extras missing
+    api_app = None  # type: ignore
+
+    def set_billing_hook(*_args, **_kwargs):  # type: ignore
+        raise ImportError("FastAPI dependencies not installed; install fractal_down[api]")
 
 __all__ = [
     "__version__",
