@@ -10,6 +10,16 @@ import time
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
+
+def _sanitize_tenant_id(tenant_id: str) -> str:
+    """Validate tenant_id to avoid path traversal."""
+    tenant_id = tenant_id.strip()
+    if not tenant_id or tenant_id in {".", ".."}:
+        raise ValueError("invalid tenant_id")
+    if Path(tenant_id).name != tenant_id:
+        raise ValueError("invalid tenant_id")
+    return tenant_id
+
 from fractal_down.dag import DAG
 from fractal_down.fractal import FractalParams
 from fractal_down.treelift import Plan
@@ -19,6 +29,7 @@ from fractal_down.hashing import get_default_provider
 
 def get_cache_dir(tenant_id: str = "default") -> Path:
     """Get the plan cache directory for a tenant, creating if necessary."""
+    tenant_id = _sanitize_tenant_id(tenant_id)
     cache_dir_str = os.environ.get("FRACTAL_DOWN_PLANS_DIR")
     if cache_dir_str:
         root_dir = Path(cache_dir_str)
