@@ -25,10 +25,12 @@ from . import examples
 from . import scenarios  
 from . import tests
 from . import reports
+from . import proposal_generator
 
 __all__ = [
     "examples",
     "scenarios", 
     "tests",
-    "reports"
+    "reports",
+    "proposal_generator"
 ]
