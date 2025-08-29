@@ -4,8 +4,13 @@ Test the comprehensive proposal generator.
 
 import pytest
 import os
+import sys
 import json
 import tempfile
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from trimble.proposal_generator import generate_comprehensive_proposal, save_proposal, render_proposal_as_markdown
 
 

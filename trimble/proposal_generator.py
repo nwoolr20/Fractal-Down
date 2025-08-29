@@ -290,7 +290,7 @@ Generated: {proposal["metadata"]["generated_date"]}
 
 
 def main():
-    """Generate and save comprehensive proposal."""
+    """Generate and save comprehensive proposal and business pitch PDF."""
     print("=" * 60)
     print("TRIMBLE-FRACTAL-DOWN INTEGRATION PROPOSAL GENERATOR")
     print("=" * 60)
@@ -309,6 +309,19 @@ def main():
         print(f"✓ JSON proposal: {file_paths['json']}")
         print(f"✓ Markdown proposal: {file_paths['markdown']}")
         print(f"✓ Summary: {file_paths['summary']}")
+        print()
+        
+        # Generate business pitch PDF
+        print("Generating business pitch PDF...")
+        try:
+            from .business_pitch_generator import generate_trimble_business_pitch_pdf
+            pdf_path = generate_trimble_business_pitch_pdf()
+            print(f"✓ Business pitch PDF: {pdf_path}")
+        except ImportError as e:
+            print(f"⚠️  Business pitch PDF generation not available: {e}")
+        except Exception as e:
+            print(f"⚠️  Error generating business pitch PDF: {e}")
+        
         print()
         
         # Print key metrics
