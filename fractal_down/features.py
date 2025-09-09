@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0 OR LicenseRef-Fractal-Down
+# SPDX-FileCopyrightText: 2025 Nicholas Woolridge & NOCTRL™ (Nô)
+
 """Feature flag utilities for optional enterprise components."""
 
 from __future__ import annotations
