@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0 OR LicenseRef-Fractal-Down
+# SPDX-FileCopyrightText: 2025 Nicholas Woolridge & NOCTRL™ (Nô)
+
 """Simple FastAPI app exposing plan build/run endpoints."""
 
 from typing import Any, Dict, List, Optional, Tuple

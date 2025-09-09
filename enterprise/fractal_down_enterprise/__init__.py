@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0 OR LicenseRef-Fractal-Down
+# SPDX-FileCopyrightText: 2025 Nicholas Woolridge & NOCTRL™ (Nô)
+
 """Enterprise distribution for Fractal-Down.
 
 Importing this package enables enterprise-only feature flags for the
