@@ -30,6 +30,7 @@
 - [Configuration](#configuration)
 - [Related Work](#related-work)
 - [Benchmarks & Performance](#benchmarks--performance)
+- [Roadmap](#roadmap)
 - [Pricing](#pricing)
 - [Purchase](#purchase)
 - [Contact](#contact)
@@ -434,6 +435,19 @@ The benchmark suite includes:
 - `synthetic`: Parameterizable graph generation for scaling analysis
 
 Results are saved to `artifacts/` with system information, detailed metrics, and simple charts.
+
+## Roadmap
+
+The initial release already ships with the core features needed for production use:
+
+- [x] Core DAG engine with cycle detection and metadata support
+- [x] Fractal priority scheduler and TreeLift √N plan builder
+- [x] Memory-bounded evaluator with deterministic replay
+- [x] Binary plan caching with hash-based verification
+- [x] Command-line interface and benchmarking suite
+- [x] Comprehensive test coverage and CI pipeline
+
+Future enhancements will be proposed and tracked through the issue tracker.
 
 ## Pricing
 
