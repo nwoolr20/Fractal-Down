@@ -2,10 +2,10 @@
 # SPDX-FileCopyrightText: 2025 Nicholas Woolridge & NOCTRL™ (Nô)
 
 """
-√N TreeLift Plan builder for fractal-down.
+TreeLift Plan builder for fractal-down.
 
 Implements the TreeLift algorithm that simulates evaluation with an LRU cache
-to build execution plans with square-root memory complexity.
+to build execution plans with configurable memory budgets (default: √N heuristic).
 """
 
 from dataclasses import dataclass
@@ -18,7 +18,7 @@ from fractal_down.dag import DAG
 
 @dataclass(frozen=True)
 class Plan:
-    """Execution plan for DAG evaluation with √N memory constraint."""
+    """Execution plan for DAG evaluation with LRU-based memory management."""
 
     root: int
     budget_nodes: int
@@ -32,15 +32,16 @@ def build_plan(
     node_priority: Optional[Mapping[int, float]] = None,
 ) -> Plan:
     """
-    Build a √N TreeLift execution plan for the given DAG.
+    Build a TreeLift execution plan for the given DAG.
 
     Simulates evaluation with an LRU cache to determine which nodes need
-    to be computed/recomputed and in what order.
+    to be computed/recomputed and in what order. Uses a √N heuristic for
+    default budget size.
 
     Args:
         dag: The DAG to build a plan for
         root: Root node ID to evaluate
-        budget_nodes: Maximum cache size (defaults to √N)
+        budget_nodes: Maximum cache size (defaults to √N heuristic)
         node_priority: Priority mapping for parent ordering (higher = earlier)
 
     Returns:
