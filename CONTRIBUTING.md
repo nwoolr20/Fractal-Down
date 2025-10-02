@@ -244,7 +244,7 @@ Brief description of changes and motivation.
 
 ### Memory Efficiency
 
-- Respect √N memory constraints in new algorithms
+- Respect memory budget constraints in new algorithms
 - Use generators where appropriate
 - Avoid unnecessary copying of large data structures
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document provides advisory guidance for implementing deterministic verification and validation practices when using Fractal-Down in production environments. These recommendations are designed to help ensure consistent, reliable results across different environments and use cases.
+This document provides advisory guidance for implementing deterministic verification and validation practices when using Fractal-Down. These recommendations are designed to help ensure consistent, reliable results across different environments and use cases.
 
 ## Deterministic Verification
 
@@ -37,7 +37,7 @@ To ensure consistent plan generation:
 
 ### Resource Constraint Verification
 
-Monitor and validate memory usage to ensure the √N memory guarantees:
+Monitor and validate memory usage with LRU cache-based memory management:
 
 1. **Peak memory tracking**: Monitor `peak_rss_bytes` during evaluation
 2. **Budget validation**: Verify that budget constraints are respected
@@ -108,13 +108,13 @@ if cached_plan:
 
 ### Testing and Validation
 
-1. **Comprehensive test suite**: Run full test suite before production deployment
-2. **Integration testing**: Test with realistic production-sized workloads
-3. **Smoke testing**: Implement basic verification checks in production monitoring
+1. **Comprehensive test suite**: Run full test suite before deployment
+2. **Integration testing**: Test with realistic workloads
+3. **Smoke testing**: Implement basic verification checks in monitoring
 
 ```python
-# Production smoke test example
-def production_smoke_test():
+# Smoke test example
+def smoke_test():
     # Simple verification that core functionality works
     dag = create_test_dag()
     inputs = get_test_inputs()
