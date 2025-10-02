@@ -212,7 +212,7 @@ def generate_html_charts(data: List[Dict[str, Any]], output_path: Union[str, Pat
 <body>
     <div class="header">
         <h1>🔬 Fractal-Down Benchmark Results</h1>
-        <p>Educational DAG evaluator with LRU caching and priority scheduling</p>
+        <p>DAG evaluation with √N memory and fractal priority scheduling</p>
     </div>
 """
     

@@ -9,7 +9,7 @@
   <img alt="Fractal-Down Banner" src="https://github.com/user-attachments/assets/c4f972a8-af5d-49eb-bc61-0310f3ebaaca" width="600">
 </p>
 
-**Educational implementation of DAG evaluation with LRU caching and priority scheduling.**
+**DAG evaluation with √N memory and fractal priority scheduling.**
 
 ## Table of Contents
 
@@ -117,8 +117,6 @@ Fractal-Down is an educational Python package that evaluates computational DAGs 
 - **Deterministic Execution**: All algorithms produce reproducible results with deterministic tie-breaking.
 
 The core idea is that computation "descends" where energy is high (hence "fractal-down"), and the LRU evaluator bounds memory usage while the plan cache enables efficient replay.
-
-**Important**: This is not an implementation of Williams' square-root space simulation theorem. It's a DAG evaluator with LRU caching and a √N heuristic for the budget size.
 
 ## Quick Start
 
@@ -362,9 +360,6 @@ Environment variables:
 
 This project draws inspiration from several areas of research and practice:
 
-- **Square-root–space simulation (complexity theory)**. Williams shows any time-t multitape TM can be simulated in O(√(t log t)) space. While theoretically fascinating, Fractal-Down does not implement this result—it uses practical LRU caching with a √N heuristic.  
-Link: https://arxiv.org/abs/2502.17779 (paper) and https://people.csail.mit.edu/rrw/time-vs-space.pdf (PDF).
-
 - **Gradient checkpointing (sublinear activation memory)**. Classic result trading recomputation for memory during backprop, achieving O(√n) activation memory. This inspired the memory-computation tradeoff approach.  
 Link: https://arxiv.org/abs/1604.06174 (paper).
 
@@ -388,9 +383,6 @@ Links: https://arxiv.org/abs/1603.08983 (paper) — PDF: https://openreview.net/
 
 - **Adaptive Mesh Refinement & wavelets (refine "interesting" regions)**. AMR and wavelets concentrate resolution where local error is high—inspired the fractal-down energy gating concept.  
 Links: Berger & Colella 1989 JCP: https://www.sciencedirect.com/science/article/pii/0021999189900351 (overview) — PDF mirror: https://crd.lbl.gov/assets/pubs_presos/AMCS/ANAG/A113.pdf; Mallat 1989 PAMI: https://www.di.ens.fr/~mallat/papiers/MallatTheory89.pdf.
-
-- **Tree Evaluation in near-log space (enabler for Williams)**. Cook & Mertz give a space-efficient algorithm for Tree Evaluation used in theoretical results.  
-Links: https://dl.acm.org/doi/10.1145/3618260.3649664 (STOC '24) — PDF: https://iuuk.mff.cuni.cz/~iwmertz/papers/cm24.tree_evaluation_is_in_space_lognloglogn.pdf.
 
 ## Benchmarks & Performance
 
