@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fractal-down"
 version = "0.1.0"
-description = "Production-grade DAG evaluation with √N memory and fractal priority scheduling"
+description = "Educational DAG evaluator with LRU caching and priority scheduling"
 readme = "README.md"
 license = {text = "Apache-2.0 OR FRACTAL-DOWN"}
 authors = [

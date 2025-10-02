@@ -2,10 +2,13 @@
 # SPDX-FileCopyrightText: 2025 Nicholas Woolridge & NOCTRL™ (Nô)
 
 """
-Fractal-Down: Production-grade DAG evaluation with √N memory and fractal priority scheduling.
+Fractal-Down: Educational DAG evaluator with LRU caching and priority scheduling.
 
-A dependency-light Python package/CLI that evaluates DAGs using square-root scratch memory
-and fractal-down priority scheduling, with binary plan caching and deterministic verification.
+A Python package/CLI that evaluates DAGs using LRU cache-based memory management
+and energy-based priority scheduling, with binary plan caching and deterministic verification.
+
+This is an educational implementation exploring DAG evaluation techniques, not a production
+system making breakthrough complexity claims.
 """
 
 from fractal_down.version import __version__

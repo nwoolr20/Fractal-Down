@@ -9,17 +9,14 @@
   <img alt="Fractal-Down Banner" src="https://github.com/user-attachments/assets/c4f972a8-af5d-49eb-bc61-0310f3ebaaca" width="600">
 </p>
 
-**Production-grade DAG evaluation with √N memory and fractal priority scheduling.**
+**Educational implementation of DAG evaluation with LRU caching and priority scheduling.**
 
 ## Table of Contents
 
-- [Why Fractal-Down](#why-fractal-down)
-- [What it buys](#what-it-buys)
-- [Where to use it (real-world)](#where-to-use-it-real-world)
-- [Two quick scenarios](#two-quick-scenarios)
-- [Who benefits](#who-benefits)
+- [What is Fractal-Down](#what-is-fractal-down)
+- [What it Does Well](#what-it-does-well)
+- [Potential Use Cases](#potential-use-cases)
 - [Repository Structure](#repository-structure)
-- [Technical Overview](#technical-overview)
 - [Quick Start](#quick-start)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
@@ -30,47 +27,39 @@
 - [Configuration](#configuration)
 - [Related Work](#related-work)
 - [Benchmarks & Performance](#benchmarks--performance)
-- [Pricing](#pricing)
-- [Purchase](#purchase)
-- [Contact](#contact)
 - [License](#license)
 - [Contributing](#contributing)
 
-## Why Fractal-Down
+## What is Fractal-Down
 
-Fractal-Down lets you run big, dependency-heavy graphs on small machines—fast enough, memory-safe, and reproducible—by spending compute only where the signal is. Bound peak scratch to ≈√N nodes, schedule high-value paths first, and cache the execution plan (not activations) for deterministic replay later.
+Fractal-Down is an educational implementation exploring DAG (Directed Acyclic Graph) evaluation techniques. It demonstrates several practical approaches to managing computational graphs:
 
-## What it buys
+- **LRU-based memory management**: Uses a least-recently-used cache with configurable budget to limit memory usage during evaluation
+- **Priority scheduling**: Evaluates nodes based on energy functions that consider factors like residual error, entropy, and novelty
+- **Plan caching**: Stores execution plans for deterministic replay
+- **Good engineering practices**: Clean code, comprehensive tests, and clear APIs
 
-- **Bounded RAM by design**. Peak scratch scales ≈ √N instead of N, so 8–16 GB laptops/phones can handle graphs that normally need workstations.
-- **Anytime results**. You can stop early and still have a coherent answer; more time just refines "interesting" parts.
-- **Deterministic replay**. Binary plans cache the execution recipe; You can reproduce the exact result later/on another box.
-- **Lower energy & cost**. Recompute beats hoarding memory—great for edge, mobile, and cost-sensitive servers.
+This is a learning project that implements interesting ideas from computational graph literature, not a production system making breakthrough complexity claims.
 
-## Where to use it (real-world)
+## What it Does Well
 
-- **On-device AI / edge inference**: retrieval, ranking, feature pipelines under hard memory ceilings.
-- **Search/RAG pipelines**: pre-plan a query DAG; descend only into shards with high residual/novelty; cache the plan for popular queries.
-- **Code intelligence on huge repos**: static analysis/refs with √N scratch; stream early results, get full fidelity if I let it run.
-- **Security scanning**: CVE/secret scans with priority on recent/high-risk code; stay inside CI memory quotas.
-- **Data engineering on small boxes**: transforms/joins over "too big" datasets via planning + spill + recompute.
-- **Scientific/geo**: tiles/LiDAR/PDE-ish graphs—refine where error spikes, not the whole surface.
-- **Vision/video analytics**: push depth into salient regions (motion/faces/text), keep backgrounds coarse—fits tight VRAM.
-- **Robotics & SLAM**: bounded map updates on embedded hardware; refine high-uncertainty nodes only.
-- **Finance/backtesting**: signals → features → strategies; drill into high-residual regimes; plans aid audit.
-- **Genomics/bio**: large variant/annotation DAGs under strict RAM; reuse plan recipes across cohorts.
+- **Memory-bounded evaluation**: Configurable LRU cache keeps memory usage predictable
+- **Flexible priority scheduling**: Energy-based functions let you control evaluation order
+- **Deterministic execution**: Same inputs and parameters always produce the same results
+- **Plan reuse**: Cache execution plans for repeated evaluations
+- **Clean implementation**: Well-tested, documented Python code for educational purposes
 
-## Two quick scenarios
+## Potential Use Cases
 
-1. **RAG on a 12 GB laptop**. Baseline O(N) memory trips on large corpora. Fractal-Down sets a √N cache (e.g., 256 nodes), evaluates high-salience shards first, spills/recomputes the rest. I get usable answers immediately; full fidelity if I let it finish. Next identical query replays instantly from the cached plan.
+These are areas where memory-bounded DAG evaluation with priority scheduling could be interesting to explore:
 
-2. **CI security scan with a 4 GB cap**. Parse → tokenize → rules → report. With √N scratch and priority on "recent/critical" code, the job stays within memory limits and finishes predictably instead of failing or thrashing. Plans make recurring scans faster.
+- **Educational purposes**: Learning about DAG evaluation, LRU caching, and priority scheduling
+- **Embedded ML pipelines**: Chaining multiple small models on microcontrollers with tight memory budgets
+- **Experimental systems**: Prototyping computation scheduling strategies
+- **Code analysis tools**: Static analysis with bounded memory consumption
+- **Research projects**: Exploring memory-efficient computation patterns
 
-## Who benefits
-
-Data/ML engineers, product teams, SRE/platform, researchers, and robotics/embedded—anyone who needs strict memory envelopes without giving up correctness.
-
-**Bottom line**: I turn memory into a safe constant—even on small devices—while steering compute where it matters most, and I make those choices portable and repeatable via cached plan recipes.
+Note: This is experimental software. For production workloads, use established systems like Dask, TensorFlow, or PyTorch.
 
 ## Repository Structure
 
@@ -120,14 +109,16 @@ Fractal-Down/
 
 ## Technical Overview
 
-Fractal-Down is a Python package that evaluates computational DAGs (Directed Acyclic Graphs) using innovative memory-efficient algorithms:
+Fractal-Down is an educational Python package that evaluates computational DAGs using interesting memory management techniques:
 
-- **√N Memory Complexity**: Uses square-root of graph size for scratch memory, making it feasible to evaluate large graphs on memory-constrained systems
-- **Fractal Priority Scheduling**: Prioritizes computation based on energy functions that consider residual error, entropy, novelty, and other factors with depth-dependent thresholds
-- **Plan Caching**: Stores execution plans in binary format with hash verification for fast re-evaluation
-- **Deterministic**: All algorithms produce reproducible results with deterministic tie-breaking
+- **LRU Cache-Based Evaluation**: Uses a configurable LRU (Least Recently Used) cache to bound memory during evaluation. While the default budget is set to √N nodes, this is a heuristic choice, not a proven optimal complexity bound.
+- **Energy-Based Priority Scheduling**: Prioritizes computation based on configurable energy functions that consider residual error, entropy, novelty, and other factors with depth-dependent thresholds.
+- **Plan Caching**: Stores execution plans in binary format with hash verification for deterministic re-evaluation.
+- **Deterministic Execution**: All algorithms produce reproducible results with deterministic tie-breaking.
 
-The core idea is that computation "descends" only where energy is high (hence "fractal-down"), and the √N evaluator bounds scratch memory usage while the plan cache saves recipes rather than activations.
+The core idea is that computation "descends" where energy is high (hence "fractal-down"), and the LRU evaluator bounds memory usage while the plan cache enables efficient replay.
+
+**Important**: This is not an implementation of Williams' square-root space simulation theorem. It's a DAG evaluator with LRU caching and a √N heuristic for the budget size.
 
 ## Quick Start
 
@@ -283,8 +274,9 @@ Where:
 
 Priorities use depth-dependent thresholds: `τₛ = τ₀ × λˢ` or `τ₀/(s+1)ᵖ`
 
-### √N TreeLift Plan
-The TreeLift algorithm simulates evaluation with an LRU cache of size `budget_nodes = max(16, ⌈√N⌉)` where N is the number of nodes. It determines the optimal sequence of node computations that respects dependencies while minimizing recomputation.
+### TreeLift Plan with LRU Cache
+
+The TreeLift algorithm simulates evaluation with an LRU cache of configurable size (by default `budget_nodes = max(16, ⌈√N⌉)` where N is the number of nodes). It determines a sequence of node computations that respects dependencies while minimizing recomputation. The √N default is a heuristic choice that often works well in practice, not a proven optimal complexity bound.
 
 ### Plan Caching
 Plans are cached using content-based fingerprints that combine:
@@ -304,7 +296,7 @@ Cached plans use a binary format with magic header, versioning, and hash verific
 | `Node` | Immutable node with id, name, operation, inputs, and metadata |
 | `FractalParams` | Parameters for energy-based priority computation |
 | `Plan` | Execution plan with root, budget, and node ordering |
-| `Evaluator` | DAG evaluator with √N memory constraint |
+| `Evaluator` | DAG evaluator with LRU cache-based memory management |
 | `EvalResult` | Evaluation result with value and hash digest |
 
 ### Key Functions
@@ -312,7 +304,7 @@ Cached plans use a binary format with magic header, versioning, and hash verific
 | Function | Description |
 |----------|-------------|
 | `compute_node_priority(dag, root, params)` | Compute fractal priorities for all reachable nodes |
-| `build_plan(dag, root, budget_nodes, node_priority)` | Build √N TreeLift execution plan |
+| `build_plan(dag, root, budget_nodes, node_priority)` | Build TreeLift execution plan with LRU cache simulation |
 | `save_plan(plan, path)` | Save plan to binary format |
 | `load_plan(path)` | Load plan from binary format |  
 | `get_or_build_plan(dag, root, budget, build_fn, params)` | Get cached plan or build new one |
@@ -368,46 +360,48 @@ Environment variables:
 
 ## Related Work
 
-- **Square-root–space simulation (complexity theory)**. Williams shows any time-t multitape TM can be simulated in O(√(t log t)) space, implying bounded-fan-in circuits of size s can be evaluated in Õ(√s) space—the theoretical backbone for √-space runtimes.  
+This project draws inspiration from several areas of research and practice:
+
+- **Square-root–space simulation (complexity theory)**. Williams shows any time-t multitape TM can be simulated in O(√(t log t)) space. While theoretically fascinating, Fractal-Down does not implement this result—it uses practical LRU caching with a √N heuristic.  
 Link: https://arxiv.org/abs/2502.17779 (paper) and https://people.csail.mit.edu/rrw/time-vs-space.pdf (PDF).
 
-- **Gradient checkpointing (sublinear activation memory)**. Classic result trading recomputation for memory during backprop, achieving O(√n) activation memory.  
+- **Gradient checkpointing (sublinear activation memory)**. Classic result trading recomputation for memory during backprop, achieving O(√n) activation memory. This inspired the memory-computation tradeoff approach.  
 Link: https://arxiv.org/abs/1604.06174 (paper).
 
 - **Revolve (optimal offline checkpoint schedules)**. Standard algorithm for adjoint/Reverse-AD checkpointing with principled time↔memory trade-offs.  
 Link: https://dl.acm.org/doi/10.1145/347837.347846 (TOMS) — PDF: https://dl.acm.org/doi/pdf/10.1145/347837.347846.
 
-- **Dynamic Tensor Rematerialization (online checkpointing)**. Greedy runtime policy that evicts/recomputes tensors; proves Ω(√N)-memory training for simple models; works with dynamic graphs.  
+- **Dynamic Tensor Rematerialization (online checkpointing)**. Greedy runtime policy that evicts/recomputes tensors using LRU-like strategies. Direct inspiration for the approach used here.  
 Link: https://arxiv.org/abs/2006.09616 (paper) — PDF: https://ztatlock.net/pubs/2021-iclr-dtr/2021-iclr-dtr.pdf — OpenReview: https://openreview.net/forum?id=Vfs_2RnOD0H.
 
-- **Compiler memory planning (XLA)**. Compiler-level transformations that reshape compute to fit explicit memory limits ("memory-safe computations"), complementary to runtime policies.  
+- **Compiler memory planning (XLA)**. Compiler-level transformations for memory-bounded computation.  
 Link: https://openreview.net/forum?id=2S_GtHBtTUP (paper) — overview: https://www.secondmind.ai/research/secondmind-papers/memory-safe-computations-with-xla-compiler.
 
-- **DAG engines with LRU/spilling**. Dask's scheduler/worker implement cache-bounded execution and spill-to-disk thresholds—practical precedents for bounded-memory task graphs (not targeting √N or fractal priority).  
+- **DAG engines with LRU/spilling**. Dask's scheduler/worker implement cache-bounded execution and spill-to-disk thresholds—practical precedents for bounded-memory task graphs.  
 Links: https://distributed.dask.org/en/stable/worker-memory.html and https://distributed.dask.org/en/latest/worker.html; GPU spilling: https://docs.rapids.ai/api/dask-cuda/stable/spilling/.
 
 - **Pebble games (I/O & memory lower bounds on DAGs)**. The red-blue pebble game formalizes cache size vs. recomputation (I/O complexity), framing limits of memory-constrained evaluations.  
 Links: https://www.eecs.harvard.edu/~htk/publication/1981-stoc-hong-kung.pdf (PDF) and https://dl.acm.org/doi/10.1145/800076.802486.
 
-- **Adaptive Computation Time (allocate compute where it matters)**. ACT learns to spend more steps on harder inputs—an architectural analogue of salience-gated descent.  
+- **Adaptive Computation Time (allocate compute where it matters)**. ACT learns to spend more steps on harder inputs—inspired the energy-based priority approach.  
 Links: https://arxiv.org/abs/1603.08983 (paper) — PDF: https://openreview.net/pdf?id=r1W1OxAF.
 
-- **Adaptive Mesh Refinement & wavelets (refine "interesting" regions)**. AMR and wavelets concentrate resolution where local error is high—classical inspiration for fractal-down gating.  
+- **Adaptive Mesh Refinement & wavelets (refine "interesting" regions)**. AMR and wavelets concentrate resolution where local error is high—inspired the fractal-down energy gating concept.  
 Links: Berger & Colella 1989 JCP: https://www.sciencedirect.com/science/article/pii/0021999189900351 (overview) — PDF mirror: https://crd.lbl.gov/assets/pubs_presos/AMCS/ANAG/A113.pdf; Mallat 1989 PAMI: https://www.di.ens.fr/~mallat/papiers/MallatTheory89.pdf.
 
-- **Tree Evaluation in near-log space (enabler for Williams)**. Cook & Mertz give a space-efficient algorithm for Tree Evaluation used inside the √-space time simulation.  
+- **Tree Evaluation in near-log space (enabler for Williams)**. Cook & Mertz give a space-efficient algorithm for Tree Evaluation used in theoretical results.  
 Links: https://dl.acm.org/doi/10.1145/3618260.3649664 (STOC '24) — PDF: https://iuuk.mff.cuni.cz/~iwmertz/papers/cm24.tree_evaluation_is_in_space_lognloglogn.pdf.
 
 ## Benchmarks & Performance
 
 ### Algorithm Complexity
 
-The algorithms are designed for efficiency:
+The algorithms have these characteristics:
 - **DAG operations**: O(N) for most operations with memoized postorder traversal
 - **Priority computation**: O(N log N) with constraint propagation  
 - **Plan building**: O(N log B) where B is budget size
 - **Evaluation**: O(P) where P is plan length (includes recomputation)
-- **Memory usage**: O(√N) scratch space during evaluation
+- **Memory usage**: Bounded by the LRU cache size (default: approximately √N nodes, configurable)
 
 ### Benchmark Results
 
@@ -422,10 +416,11 @@ fd bench --scenarios tiny --budgets 2,4,8 --repeats 5 --verify
 ```
 
 **Sample Results** (on typical development machine):
-- **Memory Usage**: ~√N nodes in scratch memory vs. O(N) for full evaluation
+- **Memory Usage**: Cache size limits memory to configured budget (default ~√N nodes)
 - **Performance**: 1000-node DAG evaluated with 32-node budget in ~10ms
 - **Correctness**: 100% digest verification across all test scenarios
 - **Cache Hit Rate**: >95% for repeated evaluations with same parameters
+- **Practical**: Good engineering for educational purposes, not breakthrough performance
 
 The benchmark suite includes:
 - `tiny`: Small DAGs for functional testing  
@@ -434,40 +429,6 @@ The benchmark suite includes:
 - `synthetic`: Parameterizable graph generation for scaling analysis
 
 Results are saved to `artifacts/` with system information, detailed metrics, and simple charts.
-
-## Pricing
-
-Fractal-Down is launching a limited beta with pay-as-you-go pricing for early adopters.
-
-| Tier | Price | Features |
-|------|-------|----------|
-| Beta | Pay-as-you-go | Limited access, metered billing per plan build/run |
-| Community | Free | Open-source usage, community support |
-| Professional | $499/month | Standard support, email & Slack, early feature access |
-| Enterprise | Custom | Premium support, integration consulting, training workshops |
-
-## Purchase
-
-To purchase a commercial license:
-
-1. Select a tier from the [Pricing](#pricing) table.
-2. Email [sales@fractal-down.io](mailto:sales@fractal-down.io) with your selected plan and expected usage.
-3. Our team will provide an invoice and deliver a license key upon payment.
-
-For legal questions or contract requests, contact [legal@fractal-down.io](mailto:legal@fractal-down.io).
-
-## Contact
-
-For inquiries or to request a quote, use the contact form below:
-
-<form action="https://example.com/contact" method="POST">
-  <input type="text" name="name" placeholder="Your Name" required>
-  <input type="email" name="email" placeholder="Your Email" required>
-  <textarea name="message" placeholder="How can we help?" required></textarea>
-  <button type="submit">Send</button>
-</form>
-
-You can also reach us at [support@fractal-down.io](mailto:support@fractal-down.io).
 
 ## License
 

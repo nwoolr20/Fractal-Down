@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2025 Nicholas Woolridge & NOCTRL™ (Nô)
 
 """
-DAG evaluator with √N memory constraint for fractal-down.
+DAG evaluator with LRU-based memory management for fractal-down.
 
 Executes plans with LRU caching and recomputation, supporting verification
 and deterministic tensor hashing when torch is available.
@@ -26,7 +26,7 @@ class EvalResult(NamedTuple):
 
 class Evaluator:
     """
-    DAG evaluator with √N memory constraint.
+    DAG evaluator with LRU cache-based memory management.
 
     Executes plans using an LRU cache with the specified budget,
     recomputing evicted nodes as needed.
